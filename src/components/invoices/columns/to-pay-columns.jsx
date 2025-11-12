@@ -3,6 +3,8 @@
 import { ArrowUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { IconCircleCheckFilled, IconLoader } from "@tabler/icons-react";
 
 export const columns = [
   // Selection checkbox column
@@ -79,11 +81,16 @@ export const columns = [
         waiting: "bg-yellow-100 text-yellow-800",
       };
       return (
-        <div
-          className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusColors[status]}`}
-        >
-          {status.charAt(0).toUpperCase() + status.slice(1)}
-        </div>
+        <Badge variant="outline" className="text-muted-foreground px-1.5">
+          {status === "paid" ? (
+            <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400" />
+          ) : status === "failure" ? (
+            <IconCircleCheckFilled className="fill-red-500 dark:fill-red-400" />
+          ) : (
+            <IconLoader />
+          )}
+          {status}
+        </Badge>
       );
     },
   },
@@ -161,7 +168,7 @@ export const columns = [
               Pay Now
             </Button>
           ) : (
-            <span className="text-sm text-muted-foreground">Paid</span>
+            <></>
           )}
         </div>
       );
