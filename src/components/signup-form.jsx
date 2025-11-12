@@ -58,7 +58,7 @@ export function SignupForm({
               <Field>
                 <Button type="submit">Create Account</Button>
                 <FieldDescription className="px-6 text-center">
-                  Already have an account? <a href="/auth/login">Sign in</a>
+                  Already have an account? <a href="/login">Sign in</a>
                 </FieldDescription>
               </Field>
             </FieldGroup>

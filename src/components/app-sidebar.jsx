@@ -47,7 +47,7 @@ const data = {
     },
     {
       title: "Organization Members",
-      url: "#",
+      url: "/members",
       icon: IconUsers,
     },
   ],

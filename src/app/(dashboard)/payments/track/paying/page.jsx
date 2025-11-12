@@ -1,8 +1,5 @@
 import { columns } from "@/components/invoices/columns/to-pay-columns";
 import { DataTable } from "@/components/invoices/data-table";
-import { AppSidebar } from "@/components/app-sidebar";
-import { SiteHeader } from "@/components/site-header";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 async function getData() {
   // Replace this with your actual API call
@@ -54,20 +51,9 @@ export default async function InvoicesPage() {
   const data = await getData();
 
   return (
-    <SidebarProvider
-      style={{
-        "--sidebar-width": "calc(var(--spacing) * 72)",
-        "--header-height": "calc(var(--spacing) * 12)",
-      }}
-    >
-      <AppSidebar variant="inset" />
-      <SidebarInset>
-        <SiteHeader />
-        <div className="container mx-auto py-10">
-          <h1 className="text-2xl font-bold mb-4">Invoice Payments</h1>
-          <DataTable columns={columns} data={data} />
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+    <div className="container mx-auto py-10">
+      <h1 className="text-2xl font-bold mb-4">Invoice Payments</h1>
+      <DataTable columns={columns} data={data} />
+    </div>
   );
 }
