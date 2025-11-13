@@ -17,3 +17,9 @@ export async function createUser(payload: UserCreate): Promise<User> {
   });
   return User.parse(data);
 }
+
+/** GET /v1/me → User */
+export async function getMe(): Promise<User> {
+  const { data } = await api.get("/v1/me");
+  return User.parse(data);
+}
