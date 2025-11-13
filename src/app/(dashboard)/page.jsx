@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { useUsers } from "@/lib/api/schemas/user";
 
 // Sample data for weekly payments
 const weeklyPayments = [
@@ -201,6 +202,7 @@ export default function DashboardPage() {
         .reduce((s, e) => s + e.amount, 0),
     0
   );
+
 
   return (
     <div className="space-y-6">

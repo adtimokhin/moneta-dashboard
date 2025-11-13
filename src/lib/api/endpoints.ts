@@ -13,9 +13,9 @@ const qp = (obj?: Record<string, unknown>) => {
 
 export const EP = {
   // auth
-  login: () => `/auth/login`,
-  refresh: () => `/auth/refresh`,
-  logout: () => `/auth/logout`,
+  login: () => `/v1/auth/login`,
+  refresh: () => `/v1/auth/refresh`,
+  logout: () => `/v1/auth/logout`,
 
   // companies
   companies: (params?: { cursor?: string; q?: string }) =>
