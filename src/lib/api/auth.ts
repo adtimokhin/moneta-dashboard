@@ -1,54 +1,119 @@
+// lib/auth.ts
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { api } from "./client";
 import { EP } from "./endpoints";
 import { toApiError } from "./errors";
 
-/** Auth state: no refresh tokens in this setup */
+/**
+ * Auth state shape
+ */
 type AuthState = {
+  // Auth data
   accessToken: string | null;
-  accessExp?: number | null;
+  accessExp: number | null;
+
+  // Hydration tracking (fixes initial load issue)
+  _hasHydrated: boolean;
+
+  // Actions
   setAccessToken: (p: {
     accessToken: string | null;
     accessExp?: number | null;
   }) => void;
   clear: () => void;
+  setHasHydrated: (state: boolean) => void;
 };
 
+/**
+ * Auth store with persist middleware
+ * Automatically saves/loads token from localStorage
+ */
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
+      // Auth state
       accessToken: null,
       accessExp: null,
+
+      // Hydration tracking
+      _hasHydrated: false,
+
+      // Actions
       setAccessToken: ({ accessToken, accessExp }) =>
         set({ accessToken, accessExp: accessExp ?? null }),
+
       clear: () => set({ accessToken: null, accessExp: null }),
+
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
     }),
     {
-      name: "auth-storage", // name of the item in localStorage
-      storage: createJSONStorage(() => localStorage), // use localStorage
-      // Optional: only persist specific fields
+      name: "auth-storage", // localStorage key name
+      storage: createJSONStorage(() => localStorage),
+
+      // Only persist these fields (not _hasHydrated)
       partialize: (state) => ({
         accessToken: state.accessToken,
         accessExp: state.accessExp,
       }),
+
+      // Called after rehydration from localStorage completes
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );
 
+/**
+ * Get current access token
+ * Use this in non-React contexts (e.g., axios interceptors)
+ */
 export function getAccessToken(): string | null {
   return useAuthStore.getState().accessToken;
 }
 
-export function clearAuth() {
+/**
+ * Clear all auth state
+ * Call this on logout or when token is invalid
+ */
+export function clearAuth(): void {
   useAuthStore.getState().clear();
 }
 
-/** Login with JSON body { email, password }. Maps `access_token` from server into the store. */
-export async function login(payload: { email: string; password: string }) {
+/**
+ * Check if store has finished loading from localStorage
+ * Useful for preventing premature redirects
+ */
+export function hasHydrated(): boolean {
+  return useAuthStore.getState()._hasHydrated;
+}
+
+/**
+ * Login credentials
+ */
+export type LoginPayload = {
+  email: string;
+  password: string;
+};
+
+/**
+ * Login response from server
+ */
+export type LoginResponse = {
+  access_token: string;
+  token_type: string;
+  expires_at?: number;
+};
+
+/**
+ * Login with email and password
+ * Stores the access token in the store and localStorage
+ */
+export async function login(payload: LoginPayload): Promise<LoginResponse> {
   try {
-    const { data } = await api.post(
-      EP.login(), // should be "/v1/auth/login"
+    const { data } = await api.post<LoginResponse>(
+      EP.login(),
       { email: payload.email, password: payload.password },
       { headers: { "Content-Type": "application/json" } }
     );
@@ -56,9 +121,12 @@ export async function login(payload: { email: string; password: string }) {
     // Your server returns: { "access_token": "...", "token_type": "bearer" }
     const token: string | null = data?.access_token ?? null;
 
+    // If your server returns token expiry, extract it here
+    const exp: number | null = data?.expires_at ?? null;
+
     useAuthStore.getState().setAccessToken({
       accessToken: token,
-      accessExp: null, // set if your backend returns an expiry
+      accessExp: exp,
     });
 
     return data;
@@ -67,27 +135,40 @@ export async function login(payload: { email: string; password: string }) {
   }
 }
 
-/** Optional server-side logout; always clear local state */
-export async function logout() {
+/**
+ * Logout user
+ * Optionally calls server logout endpoint, always clears local state
+ */
+export async function logout(): Promise<void> {
   try {
     // Only call if you have a logout endpoint
     if (EP.logout) {
       await api.post(EP.logout());
     }
   } catch {
-    // ignore logout network errors
+    // Ignore logout network errors
+    // Still clear local state even if server request fails
   } finally {
     clearAuth();
   }
 }
 
+/**
+ * Check if user is authenticated
+ * Note: This is synchronous, use in components with useAuthStore hook
+ */
+export function isAuthenticated(): boolean {
+  return !!getAccessToken();
+}
 
-////////////////////////////////////////////////////////////////////////////////
-// Security Note:
-// localStorage is vulnerable to XSS attacks. For production:
+/**
+ * Check if token is expired
+ * Only works if you store accessExp
+ */
+export function isTokenExpired(): boolean {
+  const { accessExp } = useAuthStore.getState();
+  if (!accessExp) return false;
 
-// Consider using httpOnly cookies (set by your backend)
-// Or use sessionStorage instead (cleared when tab closes)
-// Add token expiry checks
-// Never store sensitive data beyond the token
-////////////////////////////////////////////////////////////////////////////////
+  const now = Math.floor(Date.now() / 1000);
+  return now > accessExp;
+}

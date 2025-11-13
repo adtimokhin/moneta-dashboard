@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,9 +21,17 @@ import { Input } from "@/components/ui/input";
 import { login, useAuthStore } from "@/lib/api/auth";
 
 export function LoginForm({ className, ...props }) {
-  const [submitting, setSubmitting] = React.useState(false);
-  const [err, setErr] = React.useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState("");
   const token = useAuthStore((s) => s.accessToken);
+  const router = useRouter();
+
+  useEffect(()=>{
+    if (token) {
+      console.log("token", token)
+      router.push("/");
+    }
+  }, [token]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -34,6 +43,7 @@ export function LoginForm({ className, ...props }) {
 
     try {
       const res = await login({ email, password });
+      router.push("/"); // Dasbboard page on successful login
     } catch (e) {
       setErr(e?.message || "Login failed");
     } finally {
