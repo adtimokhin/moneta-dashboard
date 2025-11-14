@@ -17,21 +17,24 @@ export const EP = {
   refresh: () => `/v1/auth/refresh`,
   logout: () => `/v1/auth/logout`,
 
+  // users
+  users: (params?: { cursor?: string; q?: string; role?: string; companyId?: Id }) =>
+    `/v1/users${qp(params)}`,
+  user: (id: Id) => `/v1/users/${id}`,
+  me: () => `/v1/users/me`,
+
   // companies
   companies: (params?: { cursor?: string; q?: string }) =>
-    `/companies${qp(params)}`,
-  company: (id: Id) => `/companies/${id}`,
+    `/v1/companies${qp(params)}`,
+  company: (id: Id) => `/v1/companies/${id}`,
 
   // receivables
-  receivables: (params?: {
-    cursor?: string;
-    status?: string;
-    companyId?: Id;
-  }) => `/receivables${qp(params)}`,
-  receivable: (id: Id) => `/receivables/${id}`,
+  receivables: (params?: { cursor?: string; status?: string; companyId?: Id }) =>
+    `/v1/receivables${qp(params)}`,
+  receivable: (id: Id) => `/v1/receivables/${id}`,
 
   // payouts
   payouts: (params?: { companyId?: Id; cursor?: string }) =>
-    `/payouts${qp(params)}`,
-  payout: (id: Id) => `/payouts/${id}`,
+    `/v1/payouts${qp(params)}`,
+  payout: (id: Id) => `/v1/payouts/${id}`,
 };
