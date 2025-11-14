@@ -13,6 +13,16 @@ export const BaseDTO = z.object({
 export const UserRole = z.enum(["ADMIN", "BUYER", "SELLER", "ISSUER"]);
 export type UserRole = z.infer<typeof UserRole>;
 
+/** AddressType (from backend enum) */
+export const AddressType = z.enum([
+  "REGISTERED",
+  "BILLING",
+  "OFFICE",
+  "SHIPPING",
+  "OTHER",
+]);
+export type AddressType = z.infer<typeof AddressType>;
+
 /** Helpers */
 export const arrayOf = <S extends z.ZodTypeAny>(schema: S) => z.array(schema);
 export const pageOf = <S extends z.ZodTypeAny>(schema: S) =>

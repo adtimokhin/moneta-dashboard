@@ -18,8 +18,12 @@ export const EP = {
   logout: () => `/v1/auth/logout`,
 
   // users
-  users: (params?: { cursor?: string; q?: string; role?: string; companyId?: Id }) =>
-    `/v1/users${qp(params)}`,
+  users: (params?: {
+    cursor?: string;
+    q?: string;
+    role?: string;
+    companyId?: Id;
+  }) => `/v1/users${qp(params)}`,
   user: (id: Id) => `/v1/users/${id}`,
   me: () => `/v1/users/me`,
 
@@ -28,9 +32,16 @@ export const EP = {
     `/v1/companies${qp(params)}`,
   company: (id: Id) => `/v1/companies/${id}`,
 
+  // company addresses
+  companyAddresses: () => `/v1/company-addresses`,
+  companyAddress: (id: Id) => `/v1/company-addresses/${id}`, // (detail not yet implemented server-side, reserved)
+
   // receivables
-  receivables: (params?: { cursor?: string; status?: string; companyId?: Id }) =>
-    `/v1/receivables${qp(params)}`,
+  receivables: (params?: {
+    cursor?: string;
+    status?: string;
+    companyId?: Id;
+  }) => `/v1/receivables${qp(params)}`,
   receivable: (id: Id) => `/v1/receivables/${id}`,
 
   // payouts
