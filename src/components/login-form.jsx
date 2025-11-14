@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,8 +18,39 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { login, useAuthStore } from "@/lib/api/auth";
 
 export function LoginForm({ className, ...props }) {
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState("");
+  const token = useAuthStore((s) => s.accessToken);
+  const router = useRouter();
+
+  useEffect(()=>{
+    if (token) {
+      console.log("token", token)
+      router.push("/");
+    }
+  }, [token]);
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    setErr("");
+    setSubmitting(true);
+    const fd = new FormData(e.currentTarget);
+    const email = String(fd.get("email") || "");
+    const password = String(fd.get("password") || "");
+
+    try {
+      const res = await login({ email, password });
+      router.push("/"); // Dasbboard page on successful login
+    } catch (e) {
+      setErr(e?.message || "Login failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card>
@@ -26,15 +61,17 @@ export function LoginForm({ className, ...props }) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form>
+          <form onSubmit={onSubmit}>
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="email">Email</FieldLabel>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   placeholder="m@example.com"
                   required
+                  disabled={submitting}
                 />
               </Field>
               <Field>
@@ -47,11 +84,25 @@ export function LoginForm({ className, ...props }) {
                     Forgot your password?
                   </a>
                 </div>
-                <Input id="password" type="password" required />
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  required
+                  disabled={submitting}
+                />
               </Field>
               <Field>
-                <Button type="submit">Login</Button>
-                {/* TODO: Add alternative login methods */}
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? "Logging in…" : "Login"}
+                </Button>
+                <FieldDescription className="text-center mt-2">
+                  {err ? (
+                    <span className="text-red-600">{err}</span>
+                  ) : (
+                    <>Token: {token ? "[set]" : "[none]"} </>
+                  )}
+                </FieldDescription>
                 <FieldDescription className="text-center">
                   Don&apos;t have an account? <a href="/signup">Sign up</a>
                 </FieldDescription>
