@@ -1,69 +1,7 @@
-// lib/auth.ts
-import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import { useAuthStore } from "../persist/auth/store";
 import { api } from "./client";
 import { EP } from "./endpoints";
 import { toApiError } from "./errors";
-
-/**
- * Auth state shape
- */
-type AuthState = {
-  // Auth data
-  accessToken: string | null;
-  accessExp: number | null;
-
-  // Hydration tracking (fixes initial load issue)
-  _hasHydrated: boolean;
-
-  // Actions
-  setAccessToken: (p: {
-    accessToken: string | null;
-    accessExp?: number | null;
-  }) => void;
-  clear: () => void;
-  setHasHydrated: (state: boolean) => void;
-};
-
-/**
- * Auth store with persist middleware
- * Automatically saves/loads token from localStorage
- */
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
-      // Auth state
-      accessToken: null,
-      accessExp: null,
-
-      // Hydration tracking
-      _hasHydrated: false,
-
-      // Actions
-      setAccessToken: ({ accessToken, accessExp }) =>
-        set({ accessToken, accessExp: accessExp ?? null }),
-
-      clear: () => set({ accessToken: null, accessExp: null }),
-
-      setHasHydrated: (state) => set({ _hasHydrated: state }),
-    }),
-    {
-      name: "auth-storage", // localStorage key name
-      storage: createJSONStorage(() => localStorage),
-
-      // Only persist these fields (not _hasHydrated)
-      partialize: (state) => ({
-        accessToken: state.accessToken,
-        accessExp: state.accessExp,
-      }),
-
-      // Called after rehydration from localStorage completes
-      onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
-      },
-    }
-  )
-);
 
 /**
  * Get current access token

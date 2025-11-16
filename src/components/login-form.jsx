@@ -18,7 +18,8 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { login, useAuthStore } from "@/lib/api/auth";
+import { login } from "@/lib/api/auth";
+import { useAuthStore } from "@/lib/persist/auth/store";
 
 export function LoginForm({ className, ...props }) {
   const [submitting, setSubmitting] = useState(false);
