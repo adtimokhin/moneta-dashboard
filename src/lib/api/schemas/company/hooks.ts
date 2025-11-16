@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { listCompanies, createCompany } from "./service";
+import { listCompanies, createCompany, searchCompanies, getCompanyById } from "./service";
 import { companiesKeys } from "./queries";
-import type { CompanyCreate } from "./schemas";
+import type { CompanyCreate, CompanyFilters } from "./schemas";
 
 export function useCompanies() {
   return useQuery({
@@ -11,6 +11,21 @@ export function useCompanies() {
     // refetchInterval: false,
     // refetchOnWindowFocus: false,
     // staleTime: 5 * 60_000,
+  });
+}
+
+export function useSearchCompanies(filters: CompanyFilters) {
+  return useQuery({
+    queryKey: companiesKeys.list(filters),
+    queryFn: () => searchCompanies(filters),
+  });
+}
+
+export function useCompany(companyId: string | undefined) {
+  return useQuery({
+    queryKey: companiesKeys.detail(companyId ?? "unknown"),
+    queryFn: () => getCompanyById(companyId as string),
+    enabled: !!companyId,
   });
 }
 
