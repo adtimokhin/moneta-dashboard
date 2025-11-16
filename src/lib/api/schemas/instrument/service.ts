@@ -8,6 +8,7 @@ import {
   InstrumentFilters,
   InstrumentTransitionRequest,
 } from "./schemas";
+import { EP } from "../../endpoints";
 
 const zInstruments = arrayOf(Instrument);
 
@@ -15,7 +16,7 @@ const zInstruments = arrayOf(Instrument);
 export async function searchInstruments(
   filters: InstrumentFilters
 ): Promise<z.infer<typeof zInstruments>> {
-  const { data } = await api.post("/v1/instrument/search", filters, {
+  const { data } = await api.post(EP.v1.instrumentSearch(), filters, {
     headers: { "Content-Type": "application/json" },
   });
   return zInstruments.parse(data);
@@ -23,7 +24,7 @@ export async function searchInstruments(
 
 /** GET /v1/instrument/{id} → Instrument */
 export async function getInstrument(id: string): Promise<Instrument> {
-  const { data } = await api.get(`/v1/instrument/${id}`);
+  const { data } = await api.get(EP.v1.instrumentGetById(id));
   return Instrument.parse(data);
 }
 
@@ -31,7 +32,7 @@ export async function getInstrument(id: string): Promise<Instrument> {
 export async function createInstrument(
   payload: InstrumentCreate
 ): Promise<Instrument> {
-  const { data } = await api.post("/v1/instrument", payload, {
+  const { data } = await api.post(EP.v1.instrumentCreate(), payload, {
     headers: { "Content-Type": "application/json" },
   });
   return Instrument.parse(data);
@@ -42,9 +43,13 @@ export async function updateDraftInstrument(
   id: string,
   payload: InstrumentDRAFTUpdate
 ): Promise<Instrument> {
-  const { data } = await api.patch(`/v1/instrument/${id}`, payload, {
-    headers: { "Content-Type": "application/json" },
-  });
+  const { data } = await api.patch(
+    EP.v1.instrumentUpdateDraftById(id),
+    payload,
+    {
+      headers: { "Content-Type": "application/json" },
+    }
+  );
   return Instrument.parse(data);
 }
 
@@ -53,7 +58,7 @@ export async function transitionInstrument(
   id: string,
   body: InstrumentTransitionRequest
 ): Promise<Instrument> {
-  const { data } = await api.post(`/v1/instrument/${id}/transition`, body, {
+  const { data } = await api.post(EP.v1.instrumentTransition(id), body, {
     headers: { "Content-Type": "application/json" },
   });
   return Instrument.parse(data);
