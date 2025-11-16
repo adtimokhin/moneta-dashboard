@@ -1,137 +1,82 @@
 "use client";
 
-import { useUserFiltersStore } from "@/lib/persist/user-filters/store";
+import { useEffect } from "react";
+import { useMe } from "@/lib/api/schemas/user/hooks";
+import { useMeStore } from "@/lib/persist/auth/meStore";
+import { useAuthStore } from "@/lib/persist/auth/store";
 
-export default function UserFiltersPanel() {
-  const { filters, updateFilters, clearFilters } = useUserFiltersStore();
+export default function MePersistenceTester() {
+  const { data, isLoading, isError, refetch } = useMe();
+  const { me } = useMeStore();
+  const { accessToken, accessExp } = useAuthStore();
 
-  const current = filters || {};
-
-  const handleChange = (field, value) => {
-    // Convert empty string → undefined so backend ignores it
-    const v = value === "" ? undefined : value;
-    updateFilters({ [field]: v });
-  };
-
-  const handleNumberChange = (field, value) => {
-    const trimmed = value.trim();
-    const v = trimmed === "" ? undefined : Number(trimmed);
-    updateFilters({ [field]: v });
-  };
+  // Just for console debugging if you want
+  useEffect(() => {
+    if (me) {
+      // eslint-disable-next-line no-console
+      console.log("Persisted /me from store:", me);
+    }
+  }, [me]);
 
   return (
     <div className="space-y-4 rounded border p-4 text-sm">
-      <h2 className="text-base font-semibold">User Filters (Persisted)</h2>
+      <h2 className="text-base font-semibold">/me Persistence Tester</h2>
 
-      <div className="grid gap-3 md:grid-cols-2">
-        {/* Email */}
-        <div className="space-y-1">
-          <label className="block text-xs font-medium">Email (partial)</label>
-          <input
-            type="text"
-            value={current.email || ""}
-            onChange={(e) => handleChange("email", e.target.value)}
-            className="w-full rounded border px-2 py-1 text-xs"
-            placeholder="e.g. alex@"
-          />
+      {/* Auth info */}
+      <section className="space-y-1 rounded border p-2">
+        <div className="text-xs font-medium">Auth store</div>
+        <div className="text-[11px]">
+          <div>
+            <span className="font-semibold">accessToken:</span>{" "}
+            <code>{accessToken || "(null)"}</code>
+          </div>
+          <div>
+            <span className="font-semibold">accessExp:</span>{" "}
+            <code>{accessExp != null ? accessExp : "(null)"}</code>
+          </div>
+        </div>
+      </section>
+
+      {/* Query controls */}
+      <section className="space-y-2 rounded border p-2">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => refetch()}
+            className="rounded border px-3 py-1 text-xs font-medium"
+          >
+            Refetch /me
+          </button>
+          {isLoading && (
+            <span className="text-xs text-blue-600">Loading /me…</span>
+          )}
+          {isError && (
+            <span className="text-xs text-red-600">Error loading /me</span>
+          )}
         </div>
 
-        {/* First name */}
-        <div className="space-y-1">
-          <label className="block text-xs font-medium">First name</label>
-          <input
-            type="text"
-            value={current.firstName || ""}
-            onChange={(e) => handleChange("firstName", e.target.value)}
-            className="w-full rounded border px-2 py-1 text-xs"
-          />
+        <div className="text-[11px]">
+          <div className="font-semibold mb-1">Latest /me from React Query</div>
+          <pre className="max-h-40 overflow-auto rounded bg-black/5 p-2">
+            {data ? JSON.stringify(data, null, 2) : "(no data yet)"}
+          </pre>
         </div>
+      </section>
 
-        {/* Last name */}
-        <div className="space-y-1">
-          <label className="block text-xs font-medium">Last name</label>
-          <input
-            type="text"
-            value={current.lastName || ""}
-            onChange={(e) => handleChange("lastName", e.target.value)}
-            className="w-full rounded border px-2 py-1 text-xs"
-          />
+      {/* Persisted /me */}
+      <section className="space-y-2 rounded border p-2">
+        <div className="text-xs font-medium">Persisted /me from meStore</div>
+        <div className="text-[11px]">
+          <pre className="max-h-40 overflow-auto rounded bg-black/5 p-2">
+            {me ? JSON.stringify(me, null, 2) : "(me is null in store)"}
+          </pre>
         </div>
+      </section>
 
-        {/* Role */}
-        <div className="space-y-1">
-          <label className="block text-xs font-medium">Role</label>
-          <input
-            type="text"
-            value={current.role || ""}
-            onChange={(e) => handleChange("role", e.target.value)}
-            className="w-full rounded border px-2 py-1 text-xs"
-            placeholder="e.g. ADMIN, BUYER…"
-          />
-        </div>
-
-        {/* Company ID */}
-        <div className="space-y-1">
-          <label className="block text-xs font-medium">Company ID</label>
-          <input
-            type="text"
-            value={current.companyId || ""}
-            onChange={(e) => handleChange("companyId", e.target.value)}
-            className="w-full rounded border px-2 py-1 text-xs"
-          />
-        </div>
-
-        {/* Limit */}
-        <div className="space-y-1">
-          <label className="block text-xs font-medium">Limit</label>
-          <input
-            type="number"
-            value={current.limit ?? ""}
-            onChange={(e) => handleNumberChange("limit", e.target.value)}
-            className="w-full rounded border px-2 py-1 text-xs"
-            placeholder="e.g. 50"
-          />
-        </div>
-
-        {/* Offset */}
-        <div className="space-y-1">
-          <label className="block text-xs font-medium">Offset</label>
-          <input
-            type="number"
-            value={current.offset ?? ""}
-            onChange={(e) => handleNumberChange("offset", e.target.value)}
-            className="w-full rounded border px-2 py-1 text-xs"
-            placeholder="e.g. 0"
-          />
-        </div>
-
-        {/* Sort */}
-        <div className="space-y-1">
-          <label className="block text-xs font-medium">Sort</label>
-          <input
-            type="text"
-            value={current.sort || ""}
-            onChange={(e) => handleChange("sort", e.target.value)}
-            className="w-full rounded border px-2 py-1 text-xs"
-            placeholder='e.g. "-created_at,first_name"'
-          />
-        </div>
-      </div>
-
-      <button
-        type="button"
-        onClick={clearFilters}
-        className="rounded border px-3 py-1 text-xs font-medium"
-      >
-        Clear filters
-      </button>
-
-      <div className="mt-3 rounded bg-black/5 p-2 text-[10px]">
-        <div className="mb-1 font-semibold">Current persisted filters</div>
-        <pre className="whitespace-pre-wrap break-words">
-          {JSON.stringify(filters, null, 2)}
-        </pre>
-      </div>
+      <p className="text-[11px] opacity-70">
+        Tip: refresh the page after fetching <code>/me</code> to confirm the
+        persisted value still shows up under “Persisted /me from meStore”.
+      </p>
     </div>
   );
 }

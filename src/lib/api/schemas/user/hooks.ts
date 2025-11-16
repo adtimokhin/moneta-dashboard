@@ -1,3 +1,4 @@
+import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   listUsers,
@@ -8,6 +9,7 @@ import {
 } from "./service";
 import { usersKeys } from "./queries";
 import type { UserCreate, UserFilters } from "./schemas";
+import { useMeStore } from "@/lib/persist/auth/meStore";
 
 export function useUsers() {
   return useQuery({
@@ -42,11 +44,18 @@ export function useCreateUser() {
 }
 
 export function useMe() {
-  return useQuery({
+  const { setMe } = useMeStore();
+
+  const query = useQuery({
     queryKey: usersKeys.me(),
     queryFn: getMe,
-    // optional niceties:
-    // staleTime: 5 * 60_000,
-    // refetchOnWindowFocus: false,
   });
+
+  React.useEffect(() => {
+    if (query.data) {
+      setMe(query.data);
+    }
+  }, [query.data, setMe]);
+
+  return query;
 }
