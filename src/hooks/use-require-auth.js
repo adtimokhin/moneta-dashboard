@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/lib/api/auth";
+import { useAuthStore } from "@/lib/persist/auth/store";
 
 /**
  * Hook to require authentication for a page/component
