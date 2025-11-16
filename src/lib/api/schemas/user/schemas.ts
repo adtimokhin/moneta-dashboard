@@ -9,7 +9,6 @@ export const User = BaseDTO.extend({
   companyId: MonetaID,
   role: UserRole,
 });
-export type User = z.infer<typeof User>;
 
 /** UserCreate (request body) */
 export const UserCreate = z.object({
@@ -20,13 +19,21 @@ export const UserCreate = z.object({
   companyId: MonetaID,
   role: UserRole,
 });
-export type UserCreate = z.infer<typeof UserCreate>;
 
-/** (Future) UserUpdate shape, matching your backend class */
-export const UserUpdate = z.object({
-  email: z.string().email(),
-  firstName: z.string(),
-  lastName: z.string(),
-  password: z.string().min(1),
+/** UserFilters (request body for /v1/user/search) */
+export const UserFilters = z.object({
+  email: z.string().optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  role: UserRole.optional(),
+  companyId: MonetaID.optional(),
+  createdAtAfter: z.string().optional(),
+  createdAtBefore: z.string().optional(),
+  sort: z.string().optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+  offset: z.number().int().min(0).optional(),
 });
-export type UserUpdate = z.infer<typeof UserUpdate>;
+
+export type UserCreate = z.infer<typeof UserCreate>;
+export type User = z.infer<typeof User>;
+export type UserFilters = z.infer<typeof UserFilters>;

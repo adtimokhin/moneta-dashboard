@@ -113,7 +113,7 @@ export type LoginResponse = {
 export async function login(payload: LoginPayload): Promise<LoginResponse> {
   try {
     const { data } = await api.post<LoginResponse>(
-      EP.login(),
+      EP.v1.login(),
       { email: payload.email, password: payload.password },
       { headers: { "Content-Type": "application/json" } }
     );
@@ -142,8 +142,8 @@ export async function login(payload: LoginPayload): Promise<LoginResponse> {
 export async function logout(): Promise<void> {
   try {
     // Only call if you have a logout endpoint
-    if (EP.logout) {
-      await api.post(EP.logout());
+    if (EP.v1.logout()) {
+      await api.post(EP.v1.logout());
     }
   } catch {
     // Ignore logout network errors

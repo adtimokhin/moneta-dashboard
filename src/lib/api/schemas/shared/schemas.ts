@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+////////////////////////////////////////////////////////////////////////////////
+//                            Shared Entities
+////////////////////////////////////////////////////////////////////////////////
 /** Moneta UUID (server sends camelCase) */
 export const MonetaID = z.string().uuid();
 
@@ -9,11 +12,10 @@ export const BaseDTO = z.object({
   createdAt: z.string(), // keep as string; switch to z.coerce.date() if you prefer Date
 });
 
-/** User roles enum (shared across entities) */
+////////////////////////////////////////////////////////////////////////////////
+//                                 Enums
+////////////////////////////////////////////////////////////////////////////////
 export const UserRole = z.enum(["ADMIN", "BUYER", "SELLER", "ISSUER"]);
-export type UserRole = z.infer<typeof UserRole>;
-
-/** AddressType (from backend enum) */
 export const AddressType = z.enum([
   "REGISTERED",
   "BILLING",
@@ -21,9 +23,47 @@ export const AddressType = z.enum([
   "SHIPPING",
   "OTHER",
 ]);
+export const InstrumentStatus = z.enum([
+  "DRAFT",
+  "PENDING_APPROVAL",
+  "ACTIVE",
+  "MATURED",
+  "REJECTED",
+  "SUSPENDED",
+]);
+export const MaturityStatus = z.enum([
+  "NOT_DUE",
+  "DUE",
+  "IN_GRACE",
+  "PARTIALLY_PAID",
+  "PAID",
+  "LATE",
+  "DEFAULTED",
+  "DISPUTED",
+]);
+export const TradingStatus = z.enum([
+  "OFF_MARKET",
+  "DRAFT",
+  "LISTED",
+  "PAUSED",
+  "UNDER_OFFER",
+  "RESERVED",
+  "ESCROW",
+  "SETTLEMENT_PENDING",
+  "CANCELLED",
+  "EXPIRED",
+  "SUSPENDED",
+  "FAILED_SETTLEMENT",
+]);
 export type AddressType = z.infer<typeof AddressType>;
+export type UserRole = z.infer<typeof UserRole>;
+export type InstrumentStatus = z.infer<typeof InstrumentStatus>;
+export type MaturityStatus = z.infer<typeof MaturityStatus>;
+export type TradingStatus = z.infer<typeof TradingStatus>;
 
-/** Helpers */
+////////////////////////////////////////////////////////////////////////////////
+//                                  Helpers
+////////////////////////////////////////////////////////////////////////////////
 export const arrayOf = <S extends z.ZodTypeAny>(schema: S) => z.array(schema);
 export const pageOf = <S extends z.ZodTypeAny>(schema: S) =>
   z.object({
