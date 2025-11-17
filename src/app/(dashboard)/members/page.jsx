@@ -19,6 +19,7 @@ import {
   UserCog,
   Mail,
   Phone,
+  Circle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -60,8 +61,25 @@ import {
 } from "@/lib/api/schemas/user";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { ActivationStatus } from "@/lib/api/schemas/shared/schemas";
 
 const availableRoles = ["ADMIN", "BUYER", "SELLER", "ISSUER"];
+
+// Mapping from backend enum values to human-readable labels
+const STATUS_LABELS = {
+  ACTIVE: "Active",
+  INACTIVE: "Inactive",
+  PENDING: "Pending verification",
+  SUSPENDED: "Suspended",
+  DISABLED: "Disabled",
+  DELETED: "Deleted",
+  BANNED: "Banned",
+  LOCKED: "Locked",
+  AWAITING_APPROVAL: "Awaiting approval",
+  REJECTED: "Rejected",
+  ARCHIVED: "Archived",
+  UNVERIFIED: "Unverified",
+};
 
 const getRoleBadgeVariant = (role) => {
   switch (role) {
@@ -79,7 +97,26 @@ const getRoleBadgeVariant = (role) => {
 };
 
 const getStatusBadgeVariant = (status) => {
-  return status === "Active" ? "default" : "destructive";
+  switch (status) {
+    case "ACTIVE":
+      return "default";
+    case "PENDING":
+    case "AWAITING_APPROVAL":
+    case "UNVERIFIED":
+      return "secondary";
+    case "INACTIVE":
+    case "ARCHIVED":
+      return "outline";
+    case "SUSPENDED":
+    case "DISABLED":
+    case "DELETED":
+    case "BANNED":
+    case "LOCKED":
+    case "REJECTED":
+      return "destructive";
+    default:
+      return "outline";
+  }
 };
 
 const getInitials = (name) => {
@@ -168,7 +205,7 @@ export default function OrganizationMembersPage() {
       // TODO: Let the system admins know
       toast.error("Failed to load organization members.");
     }
-  }, [isMeError, isUsersError]);
+  }, [isMeError, isUsersError, router]);
 
   useEffect(() => {
     if (!usersData) return;
@@ -193,6 +230,12 @@ export default function OrganizationMembersPage() {
           user.email;
         const joinDate = user.createdAt ?? user.created_at ?? null; // handle both camel + snake just in case
 
+        const statusValue =
+          user.accountStatus ??
+          user.account_status ??
+          ActivationStatus?.UNVERIFIED ??
+          "UNVERIFIED";
+
         return {
           id,
           name,
@@ -200,7 +243,7 @@ export default function OrganizationMembersPage() {
           phone: user.phone ?? "",
           role: user.role,
           joinDate,
-          status: "Active",
+          status: statusValue,
           avatar: "",
         };
       });
@@ -217,24 +260,43 @@ export default function OrganizationMembersPage() {
     );
   };
 
-  const handleBlockUser = (memberId) => {
-    setMembers((prev) =>
-      prev.map((member) =>
-        member.id === memberId
-          ? {
-              ...member,
-              status: member.status === "Active" ? "Blocked" : "Active",
-            }
-          : member
-      )
+  const handleBlockUser = (memberId, isSuspendedOrDisabled) => {
+    console.log("memberID", memberId);
+    patchUser(
+      {
+        userId: memberId,
+        payload: {
+          accountStatus: isSuspendedOrDisabled ? "ACTIVE" : "SUSPENDED",
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success(
+            `User was ${isSuspendedOrDisabled ? "unblocked" : "suspended"}`
+          );
+          setMembers((prev) =>
+            prev.map((member) =>
+              member.id === memberId
+                ? {
+                    ...member,
+                    status: isSuspendedOrDisabled ? "ACTIVE" : "SUSPENDED",
+                  }
+                : member
+            )
+          );
+        },
+
+        onError: (error) => {
+          console.log(error);
+        },
+      }
     );
   };
 
   const handleDeleteUser = (memberId) => {
-    console.log(`memberId to delete: ${memberId}`);
     deleteUser(memberId, {
       onSuccess: () => {
-        toast.success("User was added");
+        toast.success("User was deleted");
         setMembers((prev) => prev.filter((member) => member.id !== memberId));
       },
       onError: (error) => {
@@ -369,7 +431,12 @@ export default function OrganizationMembersPage() {
       },
       cell: ({ row }) => {
         const status = row.getValue("status");
-        return <Badge variant={getStatusBadgeVariant(status)}>{status}</Badge>;
+        const label = STATUS_LABELS[status] ?? status ?? "Unknown";
+        return (
+          <Badge variant={getStatusBadgeVariant(status)}>
+            {label.toString()}
+          </Badge>
+        );
       },
     },
     {
@@ -377,6 +444,11 @@ export default function OrganizationMembersPage() {
       header: "Actions",
       cell: ({ row }) => {
         const member = row.original;
+
+        const isSuspendedOrDisabled =
+          member.status === "SUSPENDED" ||
+          member.status === "DISABLED" ||
+          member.status === "AWAITING_APPROVAL";
 
         return (
           <DropdownMenu>
@@ -413,9 +485,22 @@ export default function OrganizationMembersPage() {
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
 
-              <DropdownMenuItem onClick={() => handleBlockUser(member.id)}>
-                <Ban className="mr-2 h-4 w-4" />
-                {member.status === "Active" ? "Block User" : "Unblock User"}
+              <DropdownMenuItem
+                onClick={() =>
+                  handleBlockUser(member.id, isSuspendedOrDisabled)
+                }
+              >
+                {isSuspendedOrDisabled ? (
+                  <>
+                    <Circle className="mr-2 h-4 w-4" />
+                    Unblock User
+                  </>
+                ) : (
+                  <>
+                    <Ban className="mr-2 h-4 w-4" />
+                    Block User
+                  </>
+                )}
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />

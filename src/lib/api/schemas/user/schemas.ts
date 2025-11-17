@@ -13,6 +13,7 @@ export const User = BaseDTO.extend({
   lastName: z.string(),
   companyId: MonetaID,
   role: UserRole,
+  accountStatus: ActivationStatus,
 });
 
 /** UserCreate (request body) */
