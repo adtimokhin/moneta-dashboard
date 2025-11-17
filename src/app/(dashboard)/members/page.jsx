@@ -287,7 +287,35 @@ export default function OrganizationMembersPage() {
         },
 
         onError: (error) => {
-          console.log(error);
+          const errorCode = error.status;
+          switch (errorCode) {
+            case 403:
+              // Forbidden
+              toast.error("You cannot change account statuses");
+              break;
+            case 404:
+              // User was not found
+              toast.error("User does not exist");
+              break;
+            case 422:
+              // Formatting error
+              // This should happen since the user does not do anything themselves
+              // TODO: warn sysadmins
+              toast.error("Failed to change the account status");
+              break;
+            case 409:
+              // User with some of these unique constraints exists
+              // In this case - email is taken
+              // This should happen since the user does not do anything themselves
+              // TODO: warn sysadmins
+              toast.error("Failed to change the account status");
+              break;
+            default:
+              // Probably 500
+              // TODO: warn sysadmins
+              toast.error("Failed to change the account status");
+              break;
+          }
         },
       }
     );
