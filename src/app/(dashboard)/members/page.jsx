@@ -52,7 +52,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMe, useSearchUsers } from "@/lib/api/schemas/user";
+import {
+  useDeleteUser,
+  useMe,
+  usePatchUser,
+  useSearchUsers,
+} from "@/lib/api/schemas/user";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -124,6 +129,17 @@ export default function OrganizationMembersPage() {
   const router = useRouter();
 
   const { data: me, isLoading: isMeLoading, isError: isMeError } = useMe();
+  const {
+    mutate: deleteUser,
+    isPending: isUserDeleteLoading,
+    error: userDeleteError,
+  } = useDeleteUser();
+
+  const {
+    mutate: patchUser,
+    isPending: isUserPatchLoading,
+    error: userPatchError,
+  } = usePatchUser();
 
   const userFilters = useMemo(
     () => ({
@@ -215,9 +231,31 @@ export default function OrganizationMembersPage() {
   };
 
   const handleDeleteUser = (memberId) => {
-    if (confirm("Are you sure you want to delete this user?")) {
-      setMembers((prev) => prev.filter((member) => member.id !== memberId));
-    }
+    console.log(`memberId to delete: ${memberId}`);
+    deleteUser(memberId, {
+      onSuccess: () => {
+        toast.success("User was added");
+        setMembers((prev) => prev.filter((member) => member.id !== memberId));
+      },
+      onError: (error) => {
+        const errorCode = error.status;
+        switch (errorCode) {
+          case 403:
+            // Forbidden
+            toast.error("Error deleting the user");
+            break;
+          case 404:
+            // No User
+            toast.error("User does not exist");
+            break;
+          case 500:
+            // Internal server error
+            toast.error("Error deleting the user");
+            break;
+        }
+        console.error("error deleting a user", error);
+      },
+    });
   };
 
   const columns = [

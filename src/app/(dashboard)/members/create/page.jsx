@@ -58,7 +58,7 @@ export default function AddUserPage() {
   const {
     mutate: createUser,
     isPending: isUserCreateLoading,
-    error: isUserCreateError,
+    error: userCreateError,
   } = useCreateUser();
 
   const form = useForm({
@@ -126,10 +126,10 @@ export default function AddUserPage() {
             default:
               // Unknown error
               toast.error("Unknown error occured");
+              console.log("ERROR", error);
               router.push("/members"); // members page
               break;
           }
-          console.log("ERROR", error);
         },
       }
     );
