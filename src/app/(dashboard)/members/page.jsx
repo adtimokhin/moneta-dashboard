@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useMe, useSearchUsers } from "@/lib/api/schemas/user";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -85,6 +86,36 @@ const getInitials = (name) => {
     .toUpperCase();
 };
 
+// Skeleton loading component for table rows
+const TableRowSkeleton = () => (
+  <TableRow>
+    <TableCell>
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-10 w-10 rounded-full" />
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-3 w-48" />
+        </div>
+      </div>
+    </TableCell>
+    <TableCell>
+      <Skeleton className="h-4 w-28" />
+    </TableCell>
+    <TableCell>
+      <Skeleton className="h-6 w-16 rounded-full" />
+    </TableCell>
+    <TableCell>
+      <Skeleton className="h-4 w-24" />
+    </TableCell>
+    <TableCell>
+      <Skeleton className="h-6 w-16 rounded-full" />
+    </TableCell>
+    <TableCell>
+      <Skeleton className="h-8 w-8" />
+    </TableCell>
+  </TableRow>
+);
+
 export default function OrganizationMembersPage() {
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
@@ -96,7 +127,7 @@ export default function OrganizationMembersPage() {
 
   const userFilters = useMemo(
     () => ({
-      companyId: "me?.companyId ?? undefined",
+      companyId: me?.companyId ?? undefined,
       limit: 200,
       offset: 0,
       sort: "-created_at",
@@ -383,6 +414,7 @@ export default function OrganizationMembersPage() {
   });
 
   const totalRows = table.getFilteredRowModel().rows.length;
+  const isLoading = isUsersLoading && !members.length;
 
   return (
     <div className="container mx-auto py-10">
@@ -401,6 +433,7 @@ export default function OrganizationMembersPage() {
               onClick={() => {
                 router.push("/members/create");
               }}
+              disabled={isLoading}
             >
               <UserPlus className="mr-2 h-4 w-4" />
               Add Member
@@ -416,6 +449,7 @@ export default function OrganizationMembersPage() {
                 value={globalFilter ?? ""}
                 onChange={(event) => setGlobalFilter(event.target.value)}
                 className="h-9"
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -441,15 +475,14 @@ export default function OrganizationMembersPage() {
                 ))}
               </TableHeader>
               <TableBody>
-                {isUsersLoading && !members.length ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-24 text-center text-muted-foreground"
-                    >
-                      Loading members...
-                    </TableCell>
-                  </TableRow>
+                {isLoading ? (
+                  <>
+                    <TableRowSkeleton />
+                    <TableRowSkeleton />
+                    <TableRowSkeleton />
+                    <TableRowSkeleton />
+                    <TableRowSkeleton />
+                  </>
                 ) : isUsersError ? (
                   <TableRow>
                     <TableCell
@@ -491,14 +524,18 @@ export default function OrganizationMembersPage() {
 
           <div className="flex items-center justify-between space-x-2 py-4">
             <div className="flex-1 text-sm text-muted-foreground">
-              {totalRows} member(s) total
+              {isLoading ? (
+                <Skeleton className="h-4 w-32" />
+              ) : (
+                `${totalRows} member(s) total`
+              )}
             </div>
             <div className="space-x-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
+                disabled={!table.getCanPreviousPage() || isLoading}
               >
                 Previous
               </Button>
@@ -506,7 +543,7 @@ export default function OrganizationMembersPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
+                disabled={!table.getCanNextPage() || isLoading}
               >
                 Next
               </Button>
