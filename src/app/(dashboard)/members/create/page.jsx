@@ -85,7 +85,7 @@ export default function AddUserPage() {
       {
         onSuccess: () => {
           // 2. Show success notification
-          toast.success("New User was added!");
+          toast.success("User was added");
           // 3. Redirect to members page on success
           router.push("/members");
         },
