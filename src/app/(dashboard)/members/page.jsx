@@ -53,6 +53,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useMe, useSearchUsers } from "@/lib/api/schemas/user";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 const availableRoles = ["ADMIN", "BUYER", "SELLER", "ISSUER"];
 
@@ -95,7 +96,7 @@ export default function OrganizationMembersPage() {
 
   const userFilters = useMemo(
     () => ({
-      companyId: me?.companyId ?? undefined,
+      companyId: "me?.companyId ?? undefined",
       limit: 200,
       offset: 0,
       sort: "-created_at",
@@ -111,6 +112,16 @@ export default function OrganizationMembersPage() {
     isError: isUsersError,
   } = useSearchUsers(userFilters, { enabled: usersEnabled });
 
+  useEffect(() => {
+    if (isMeError) {
+      router.push("/"); // Need to re-login
+    }
+    if (isUsersError) {
+      // This should not be happening under normal circumstances
+      // TODO: Let the system admins know
+      toast.error("Failed to load organization members.");
+    }
+  }, [isMeError, isUsersError]);
 
   useEffect(() => {
     if (!usersData) return;
@@ -386,7 +397,11 @@ export default function OrganizationMembersPage() {
                 Manage members and their roles in your organization
               </CardDescription>
             </div>
-            <Button onClick={()=>{router.push("/members/create")}}>
+            <Button
+              onClick={() => {
+                router.push("/members/create");
+              }}
+            >
               <UserPlus className="mr-2 h-4 w-4" />
               Add Member
             </Button>
@@ -441,7 +456,7 @@ export default function OrganizationMembersPage() {
                       colSpan={columns.length}
                       className="h-24 text-center text-destructive"
                     >
-                      Failed to load members.
+                      Failed to load data.
                     </TableCell>
                   </TableRow>
                 ) : table.getRowModel().rows?.length ? (
