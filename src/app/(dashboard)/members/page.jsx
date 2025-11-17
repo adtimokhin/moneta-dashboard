@@ -53,7 +53,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useMe, useSearchUsers } from "@/lib/api/schemas/user";
 
-// ---- roles from your schema ----
 const availableRoles = ["ADMIN", "BUYER", "SELLER", "ISSUER"];
 
 const getRoleBadgeVariant = (role) => {
@@ -90,17 +89,8 @@ export default function OrganizationMembersPage() {
   const [globalFilter, setGlobalFilter] = useState("");
   const [members, setMembers] = useState([]);
 
-  console.log("[OrgMembers] render");
-
-  // ---- 1) Get current user (/me) ----
   const { data: me, isLoading: isMeLoading, isError: isMeError } = useMe();
 
-  useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log("[OrgMembers] /me changed:", { me, isMeLoading, isMeError });
-  }, [me, isMeLoading, isMeError]);
-
-  // ---- 2) Prepare filters for /v1/user/search ----
   const userFilters = useMemo(
     () => ({
       companyId: me?.companyId ?? undefined,
@@ -119,16 +109,7 @@ export default function OrganizationMembersPage() {
     isError: isUsersError,
   } = useSearchUsers(userFilters, { enabled: usersEnabled });
 
-  useEffect(() => {
-    // eslint-disable-next-line no-console
-    console.log("[OrgMembers] data changed:", {
-      usersData,
-      isUsersLoading,
-      isUsersError,
-    });
-  }, [usersData, isUsersLoading, isUsersError]);
 
-  // ---- 3) Map real users into table rows (local state) ----
   useEffect(() => {
     if (!usersData) return;
 
@@ -168,7 +149,6 @@ export default function OrganizationMembersPage() {
     });
   }, [usersData]);
 
-  // ---- 4) Local-only UI actions (no backend yet) ----
   const handleRoleChange = (memberId, newRole) => {
     setMembers((prev) =>
       prev.map((member) =>
@@ -196,7 +176,6 @@ export default function OrganizationMembersPage() {
     }
   };
 
-  // ---- 5) Table columns ----
   const columns = [
     {
       accessorKey: "name",
@@ -405,7 +384,7 @@ export default function OrganizationMembersPage() {
                 Manage members and their roles in your organization
               </CardDescription>
             </div>
-            <Button>
+            <Button onClick={()=>{console.log("BUTTON")}}>
               <UserPlus className="mr-2 h-4 w-4" />
               Add Member
             </Button>
