@@ -36,6 +36,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useCreateUser, useMe } from "@/lib/api/schemas/user";
 import { UserRole } from "@/lib/api/schemas/shared/schemas";
+import { toast } from "sonner";
+import { useEffect } from "react";
 
 const formSchema = z.object({
   email: z
@@ -83,18 +85,50 @@ export default function AddUserPage() {
       {
         onSuccess: () => {
           // 2. Show success notification
-          alert("User added successfully!"); // TODO: Add toasts
+          toast.success("New User was added!");
           // 3. Redirect to members page on success
           router.push("/members");
         },
         onError: (error) => {
           const errorCode = error.status;
-          // 401 - User is not authenticated
-          // 403 - user does not have the premissions
-          // 404 - company does not exist
-          // 409 - such user (with such email) already exists
-          // 422 - the request is form incorrectly
-          // 500 - internal server error creating the entity
+          switch (errorCode) {
+            case 401:
+              // 401 - User is not authenticated -> Need to redirect User to login
+              router.push("/login");
+              break;
+            case 403:
+              // 403 - user does not have the premissions -> Toast + redirect to dashboard
+              toast.error("Only admins of the company can add new users");
+              router.push("/"); // dashboard
+              break;
+            case 404:
+              // 404 - company does not exist -> Toast + redirect to dashboard + Need to notify the system - this should not be happening.
+              toast.error("Your company does not exist");
+              router.push("/"); // dashboard
+              break;
+            case 409:
+              // 409 - such user (with such email) already exists
+              toast.error("User this such email already exists");
+              break;
+            case 422:
+              // 422 - the request is formed incorrectly -> a system issue (need to tell the system owners) + toast + redirect to members page
+              toast.error(
+                "The form for adding new users is broke. Please try again later"
+              );
+              router.push("/members"); // members page
+              break;
+            case 500:
+              // 500 - internal server error creating the entity  -> a system issue (need to tell the system owners) + toast + redirect to members page
+              toast.error("There was a server error while adding new user");
+              router.push("/members"); // members page
+              break;
+
+            default:
+              // Unknown error
+              toast.error("Unknown error occured");
+              router.push("/members"); // members page
+              break;
+          }
           console.log("ERROR", error);
         },
       }
