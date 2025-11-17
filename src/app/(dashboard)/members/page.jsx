@@ -253,15 +253,58 @@ export default function OrganizationMembersPage() {
   }, [usersData]);
 
   const handleRoleChange = (memberId, newRole) => {
-    setMembers((prev) =>
-      prev.map((member) =>
-        member.id === memberId ? { ...member, role: newRole } : member
-      )
+    patchUser(
+      {
+        userId: memberId,
+        payload: {
+          role: newRole,
+        },
+      },
+      {
+        onSuccess: () => {
+          setMembers((prev) =>
+            prev.map((member) =>
+              member.id === memberId ? { ...member, role: newRole } : member
+            )
+          );
+        },
+
+        onError: (error) => {
+          const errorCode = error.status;
+          switch (errorCode) {
+            case 403:
+              // Forbidden
+              toast.error("You cannot change user roles");
+              break;
+            case 404:
+              // User was not found
+              toast.error("User does not exist");
+              break;
+            case 422:
+              // Formatting error
+              // This should happen since the user does not do anything themselves
+              // TODO: warn sysadmins
+              toast.error("Failed to change the user role");
+              break;
+            case 409:
+              // User with some of these unique constraints exists
+              // In this case - email is taken
+              // This should happen since the user does not do anything themselves
+              // TODO: warn sysadmins
+              toast.error("Failed to change the user role");
+              break;
+            default:
+              // Probably 500
+              // TODO: warn sysadmins
+              toast.error("Failed to change the user role");
+              break;
+          }
+        },
+      }
     );
   };
 
   const handleBlockUser = (memberId, isSuspendedOrDisabled) => {
-    console.log("memberID", memberId);
     patchUser(
       {
         userId: memberId,
@@ -271,9 +314,6 @@ export default function OrganizationMembersPage() {
       },
       {
         onSuccess: () => {
-          toast.success(
-            `User was ${isSuspendedOrDisabled ? "unblocked" : "suspended"}`
-          );
           setMembers((prev) =>
             prev.map((member) =>
               member.id === memberId
