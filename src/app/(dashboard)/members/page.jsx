@@ -52,6 +52,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useMe, useSearchUsers } from "@/lib/api/schemas/user";
+import { useRouter } from "next/navigation";
 
 const availableRoles = ["ADMIN", "BUYER", "SELLER", "ISSUER"];
 
@@ -88,6 +89,7 @@ export default function OrganizationMembersPage() {
   const [columnFilters, setColumnFilters] = useState([]);
   const [globalFilter, setGlobalFilter] = useState("");
   const [members, setMembers] = useState([]);
+  const router = useRouter();
 
   const { data: me, isLoading: isMeLoading, isError: isMeError } = useMe();
 
@@ -384,7 +386,7 @@ export default function OrganizationMembersPage() {
                 Manage members and their roles in your organization
               </CardDescription>
             </div>
-            <Button onClick={()=>{console.log("BUTTON")}}>
+            <Button onClick={()=>{router.push("/members/create")}}>
               <UserPlus className="mr-2 h-4 w-4" />
               Add Member
             </Button>
