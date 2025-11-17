@@ -6,9 +6,11 @@ import {
   getMe,
   searchUsers,
   getUserById,
+  patchUser,
+  deleteUser,
 } from "./service";
 import { usersKeys } from "./queries";
-import type { UserCreate, UserFilters } from "./schemas";
+import type { UserCreate, UserFilters, UserPatch } from "./schemas";
 import { useMeStore } from "@/lib/persist/auth/meStore";
 
 type UseSearchUsersOptions = {
@@ -70,4 +72,25 @@ export function useMe() {
   }, [query.data, setMe]);
 
   return query;
+}
+
+export function usePatchUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, payload }: { userId: string; payload: UserPatch }) =>
+      patchUser(userId, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: usersKeys.all });
+    },
+  });
+}
+
+export function useDeleteUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => deleteUser(userId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: usersKeys.all });
+    },
+  });
 }

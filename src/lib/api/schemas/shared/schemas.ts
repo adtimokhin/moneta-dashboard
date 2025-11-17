@@ -55,11 +55,26 @@ export const TradingStatus = z.enum([
   "SUSPENDED",
   "FAILED_SETTLEMENT",
 ]);
+export const ActivationStatus = z.enum([
+  "ACTIVE",
+  "INACTIVE",
+  "PENDING",
+  "SUSPENDED",
+  "DISABLED",
+  "DELETED",
+  "BANNED",
+  "LOCKED",
+  "AWAITING_APPROVAL",
+  "REJECTED",
+  "ARCHIVED",
+  "UNVERIFIED",
+]);
 export type AddressType = z.infer<typeof AddressType>;
 export type UserRole = z.infer<typeof UserRole>;
 export type InstrumentStatus = z.infer<typeof InstrumentStatus>;
 export type MaturityStatus = z.infer<typeof MaturityStatus>;
 export type TradingStatus = z.infer<typeof TradingStatus>;
+export type ActivationStatus = z.infer<typeof ActivationStatus>;
 
 ////////////////////////////////////////////////////////////////////////////////
 //                                  Helpers

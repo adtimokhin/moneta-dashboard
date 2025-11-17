@@ -9,6 +9,7 @@ const V1_ENTITY_COMPANY = "company";
 const V1_ENTITY_COMPANY_ADDRESS = "company-address";
 const V1_ENTITY_INSTRUMENT = "instrument";
 const V1_ACTION_WORD_SEARCH = "search";
+const V1_ACTION_WORD_DELETE = "delete";
 const V1_ACTION_WORD_TRANSITION = "transition";
 
 /**
@@ -38,6 +39,8 @@ export const EP = {
     userCreate: () => v1Path(V1_ENTITY_USER),
     userGetById: (id: Id) => v1Path(V1_ENTITY_USER, id),
     userSearch: () => v1Path(V1_ENTITY_USER, V1_ACTION_WORD_SEARCH),
+    userDeleteById: (id: Id) => v1Path(V1_ENTITY_USER, id),
+    userPatchById: (id: Id) => v1Path(V1_ENTITY_USER, id),
     me: () => v1Path("me"),
 
     // companies
