@@ -11,25 +11,37 @@ import { usersKeys } from "./queries";
 import type { UserCreate, UserFilters } from "./schemas";
 import { useMeStore } from "@/lib/persist/auth/meStore";
 
-export function useUsers() {
+type UseSearchUsersOptions = {
+  enabled?: boolean;
+};
+
+export function useUsers(options?: UseSearchUsersOptions) {
   return useQuery({
     queryKey: usersKeys.list({}),
     queryFn: listUsers,
+    enabled: options?.enabled,
   });
 }
 
-export function useSearchUsers(filters: UserFilters) {
+export function useSearchUsers(
+  filters: UserFilters,
+  options?: UseSearchUsersOptions
+) {
   return useQuery({
     queryKey: usersKeys.list(filters),
     queryFn: () => searchUsers(filters),
+    enabled: options?.enabled,
   });
 }
 
-export function useUser(userId: string | undefined) {
+export function useUser(
+  userId: string | undefined,
+  options?: UseSearchUsersOptions
+) {
   return useQuery({
     queryKey: usersKeys.detail(userId ?? "unknown"),
     queryFn: () => getUserById(userId as string),
-    enabled: !!userId,
+    enabled: options?.enabled && !!userId,
   });
 }
 

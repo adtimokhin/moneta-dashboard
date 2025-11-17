@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -51,82 +51,20 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useMe, useSearchUsers } from "@/lib/api/schemas/user";
 
-// Sample member data
-const sampleMembers = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john.doe@company.com",
-    phone: "+1 (555) 123-4567",
-    role: "Admin",
-    joinDate: "2023-01-15",
-    status: "Active",
-    avatar: "",
-  },
-  {
-    id: "2",
-    name: "Jane Smith",
-    email: "jane.smith@company.com",
-    phone: "+1 (555) 234-5678",
-    role: "Manager",
-    joinDate: "2023-03-20",
-    status: "Active",
-    avatar: "",
-  },
-  {
-    id: "3",
-    name: "Mike Johnson",
-    email: "mike.johnson@company.com",
-    phone: "+1 (555) 345-6789",
-    role: "Editor",
-    joinDate: "2023-06-10",
-    status: "Active",
-    avatar: "",
-  },
-  {
-    id: "4",
-    name: "Sarah Williams",
-    email: "sarah.williams@company.com",
-    phone: "+1 (555) 456-7890",
-    role: "Viewer",
-    joinDate: "2023-08-05",
-    status: "Active",
-    avatar: "",
-  },
-  {
-    id: "5",
-    name: "Emily Brown",
-    email: "emily.brown@company.com",
-    phone: "+1 (555) 567-8901",
-    role: "Editor",
-    joinDate: "2023-09-12",
-    status: "Blocked",
-    avatar: "",
-  },
-  {
-    id: "6",
-    name: "David Lee",
-    email: "david.lee@company.com",
-    phone: "+1 (555) 678-9012",
-    role: "Manager",
-    joinDate: "2023-11-01",
-    status: "Active",
-    avatar: "",
-  },
-];
-
-const availableRoles = ["Admin", "Manager", "Editor", "Viewer"];
+// ---- roles from your schema ----
+const availableRoles = ["ADMIN", "BUYER", "SELLER", "ISSUER"];
 
 const getRoleBadgeVariant = (role) => {
   switch (role) {
-    case "Admin":
+    case "ADMIN":
       return "default";
-    case "Manager":
+    case "BUYER":
       return "secondary";
-    case "Editor":
+    case "SELLER":
       return "outline";
-    case "Viewer":
+    case "ISSUER":
       return "outline";
     default:
       return "outline";
@@ -140,6 +78,7 @@ const getStatusBadgeVariant = (status) => {
 const getInitials = (name) => {
   return name
     .split(" ")
+    .filter(Boolean)
     .map((n) => n[0])
     .join("")
     .toUpperCase();
@@ -149,8 +88,87 @@ export default function OrganizationMembersPage() {
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
   const [globalFilter, setGlobalFilter] = useState("");
-  const [members, setMembers] = useState(sampleMembers);
+  const [members, setMembers] = useState([]);
 
+  console.log("[OrgMembers] render");
+
+  // ---- 1) Get current user (/me) ----
+  const { data: me, isLoading: isMeLoading, isError: isMeError } = useMe();
+
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log("[OrgMembers] /me changed:", { me, isMeLoading, isMeError });
+  }, [me, isMeLoading, isMeError]);
+
+  // ---- 2) Prepare filters for /v1/user/search ----
+  const userFilters = useMemo(
+    () => ({
+      companyId: me?.companyId ?? undefined,
+      limit: 200,
+      offset: 0,
+      sort: "-created_at",
+    }),
+    [me?.companyId]
+  );
+
+  const usersEnabled = !!me?.companyId;
+
+  const {
+    data: usersData,
+    isLoading: isUsersLoading,
+    isError: isUsersError,
+  } = useSearchUsers(userFilters, { enabled: usersEnabled });
+
+  useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.log("[OrgMembers] data changed:", {
+      usersData,
+      isUsersLoading,
+      isUsersError,
+    });
+  }, [usersData, isUsersLoading, isUsersError]);
+
+  // ---- 3) Map real users into table rows (local state) ----
+  useEffect(() => {
+    if (!usersData) return;
+
+    setMembers((prev) => {
+      // If we already have members matching the same ids, keep local edits
+      const newIds = new Set(usersData.map((u) => u.id ?? u.email));
+      const prevIds = new Set(prev.map((m) => m.id));
+
+      const sameSet =
+        newIds.size === prevIds.size &&
+        [...newIds].every((id) => prevIds.has(id));
+
+      if (prev.length && sameSet) {
+        return prev;
+      }
+
+      const mapped = usersData.map((user) => {
+        const id = user.id ?? user.email;
+        const name =
+          [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+          user.email;
+        const joinDate = user.createdAt ?? user.created_at ?? null; // handle both camel + snake just in case
+
+        return {
+          id,
+          name,
+          email: user.email,
+          phone: user.phone ?? "",
+          role: user.role,
+          joinDate,
+          status: "Active",
+          avatar: "",
+        };
+      });
+
+      return mapped;
+    });
+  }, [usersData]);
+
+  // ---- 4) Local-only UI actions (no backend yet) ----
   const handleRoleChange = (memberId, newRole) => {
     setMembers((prev) =>
       prev.map((member) =>
@@ -178,6 +196,7 @@ export default function OrganizationMembersPage() {
     }
   };
 
+  // ---- 5) Table columns ----
   const columns = [
     {
       accessorKey: "name",
@@ -214,12 +233,22 @@ export default function OrganizationMembersPage() {
     {
       accessorKey: "phone",
       header: "Phone",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-1 text-sm">
-          <Phone className="h-3 w-3 text-muted-foreground" />
-          {row.getValue("phone")}
-        </div>
-      ),
+      cell: ({ row }) => {
+        const value = row.getValue("phone");
+        if (!value) {
+          return (
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <Phone className="h-3 w-3" />—
+            </div>
+          );
+        }
+        return (
+          <div className="flex items-center gap-1 text-sm">
+            <Phone className="h-3 w-3 text-muted-foreground" />
+            {value}
+          </div>
+        );
+      },
     },
     {
       accessorKey: "role",
@@ -253,7 +282,14 @@ export default function OrganizationMembersPage() {
         );
       },
       cell: ({ row }) => {
-        const date = new Date(row.getValue("joinDate"));
+        const raw = row.getValue("joinDate");
+        if (!raw) {
+          return <div className="text-muted-foreground">—</div>;
+        }
+        const date = new Date(raw);
+        if (Number.isNaN(date.getTime())) {
+          return <div className="text-muted-foreground">—</div>;
+        }
         return <div>{date.toLocaleDateString("en-US")}</div>;
       },
     },
@@ -354,6 +390,8 @@ export default function OrganizationMembersPage() {
     },
   });
 
+  const totalRows = table.getFilteredRowModel().rows.length;
+
   return (
     <div className="container mx-auto py-10">
       <Card>
@@ -407,7 +445,25 @@ export default function OrganizationMembersPage() {
                 ))}
               </TableHeader>
               <TableBody>
-                {table.getRowModel().rows?.length ? (
+                {isUsersLoading && !members.length ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center text-muted-foreground"
+                    >
+                      Loading members...
+                    </TableCell>
+                  </TableRow>
+                ) : isUsersError ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center text-destructive"
+                    >
+                      Failed to load members.
+                    </TableCell>
+                  </TableRow>
+                ) : table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => (
                     <TableRow
                       key={row.id}
@@ -439,7 +495,7 @@ export default function OrganizationMembersPage() {
 
           <div className="flex items-center justify-between space-x-2 py-4">
             <div className="flex-1 text-sm text-muted-foreground">
-              {table.getFilteredRowModel().rows.length} member(s) total
+              {totalRows} member(s) total
             </div>
             <div className="space-x-2">
               <Button
