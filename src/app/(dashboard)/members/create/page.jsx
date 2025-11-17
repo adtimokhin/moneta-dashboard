@@ -42,20 +42,12 @@ const formSchema = z.object({
     .string()
     .min(1, "Email is required")
     .email("Please enter a valid email address"),
-  fullName: z
-    .string()
-    .min(1, "Full legal name is required")
-    .min(2, "Name must be at least 2 characters"),
-  address: z.string().min(1, "Address is required"),
-  phoneNumber: z
-    .string()
-    .min(1, "Phone number is required")
-    .regex(
-      /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/,
-      "Please enter a valid phone number"
-    ),
-  role: z.string().min(1, "Role is required"),
-  status: z.string().min(1, "Initial status is required"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  role: z.enum(["ADMIN", "BUYER", "SELLER", "ISSUER"], {
+    errorMap: () => ({ message: "Role is required" }),
+  }),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 export default function AddUserPage() {
@@ -71,27 +63,22 @@ export default function AddUserPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: "",
-      fullName: "",
-      address: "",
-      phoneNumber: "",
+      firstName: "",
+      lastName: "",
+      password: "",
       role: undefined,
-      status: undefined,
     },
   });
 
   const onSubmit = (values) => {
-    console.log("New user data:", values);
-    // Here you would typically:
-    // 1. Send data to your API
-
     createUser(
       {
         email: values.email,
-        firstName: "TEST",
-        lastName: "TEST",
-        password: "password123",
+        firstName: values.firstName,
+        lastName: values.lastName,
+        password: values.password,
         companyId: me.companyId,
-        role: "ADMISN",
+        role: values.role,
       },
       {
         onSuccess: () => {
@@ -109,7 +96,7 @@ export default function AddUserPage() {
           // 422 - the request is form incorrectly
           // 500 - internal server error creating the entity
           console.log("ERROR", error);
-        }
+        },
       }
     );
   };
@@ -164,15 +151,15 @@ export default function AddUserPage() {
                 )}
               />
 
-              {/* Full Legal Name */}
+              {/* First Name */}
               <FormField
                 control={form.control}
-                name="fullName"
+                name="firstName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Legal Name</FormLabel>
+                    <FormLabel>First Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="John Michael Doe" {...field} />
+                      <Input type="text" placeholder="John" {...field} />
                     </FormControl>
                     <FormDescription>
                       Enter the complete legal name as it appears on official
@@ -183,46 +170,37 @@ export default function AddUserPage() {
                 )}
               />
 
-              {/* Address */}
+              {/* Last Name */}
               <FormField
                 control={form.control}
-                name="address"
+                name="lastName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Address</FormLabel>
+                    <FormLabel>Last Name</FormLabel>
                     <FormControl>
-                      <Textarea
-                        placeholder="123 Main Street, Apt 4B, New York, NY 10001"
-                        className="resize-none"
-                        rows={3}
-                        {...field}
-                      />
+                      <Input type="text" placeholder="John" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Full address including street, city, state, and postal
-                      code
+                      Enter the complete legal name as it appears on official
+                      documents
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Phone Number */}
+              {/* Password */}
               <FormField
                 control={form.control}
-                name="phoneNumber"
+                name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
+                    <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input
-                        type="tel"
-                        placeholder="+1 (555) 123-4567"
-                        {...field}
-                      />
+                      <Input type="password" placeholder="***" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Include country code if applicable
+                      Enter a password. It must be at least 8 characters long
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -246,44 +224,14 @@ export default function AddUserPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Admin">Admin</SelectItem>
-                        <SelectItem value="Manager">Manager</SelectItem>
-                        <SelectItem value="Editor">Editor</SelectItem>
-                        <SelectItem value="Viewer">Viewer</SelectItem>
+                        <SelectItem value="ADMIN">ADMIN</SelectItem>
+                        <SelectItem value="BUYER">BUYER</SelectItem>
+                        <SelectItem value="SELLER">SELLER</SelectItem>
+                        <SelectItem value="ISSUER">ISSUER</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>
                       Determines the user's permissions in the system
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Initial Status */}
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Initial Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select initial status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Pending">Pending</SelectItem>
-                        <SelectItem value="Inactive">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Set whether the user can access the system immediately
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
