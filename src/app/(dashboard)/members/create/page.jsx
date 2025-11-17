@@ -34,6 +34,8 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useCreateUser, useMe } from "@/lib/api/schemas/user";
+import { UserRole } from "@/lib/api/schemas/shared/schemas";
 
 const formSchema = z.object({
   email: z
@@ -58,6 +60,12 @@ const formSchema = z.object({
 
 export default function AddUserPage() {
   const router = useRouter();
+  const { data: me, isLoading: isMeLoading, isError: isMeError } = useMe();
+  const {
+    mutate: createUser,
+    isPending: isUserCreateLoading,
+    error: isUserCreateError,
+  } = useCreateUser();
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -75,13 +83,35 @@ export default function AddUserPage() {
     console.log("New user data:", values);
     // Here you would typically:
     // 1. Send data to your API
-    // 2. Show success notification
-    // 3. Redirect to members page
-    // Example: await fetch('/api/users', { method: 'POST', body: JSON.stringify(values) })
 
-    // For now, just log and redirect
-    alert("User added successfully!");
-    router.push("/members"); // Adjust path as needed
+    createUser(
+      {
+        email: values.email,
+        firstName: "TEST",
+        lastName: "TEST",
+        password: "password123",
+        companyId: me.companyId,
+        role: "ADMISN",
+      },
+      {
+        onSuccess: () => {
+          // 2. Show success notification
+          alert("User added successfully!"); // TODO: Add toasts
+          // 3. Redirect to members page on success
+          router.push("/members");
+        },
+        onError: (error) => {
+          const errorCode = error.status;
+          // 401 - User is not authenticated
+          // 403 - user does not have the premissions
+          // 404 - company does not exist
+          // 409 - such user (with such email) already exists
+          // 422 - the request is form incorrectly
+          // 500 - internal server error creating the entity
+          console.log("ERROR", error);
+        }
+      }
+    );
   };
 
   return (
