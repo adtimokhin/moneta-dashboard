@@ -14,50 +14,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-// ---- Demo data (replace with your API data) ----
-const DEMO_RECEIVABLES = [
-  {
-    id: "INV-24001",
-    seller: "OceanLink Bunkering",
-    buyer: "Poseidon Shipping Ltd.",
-    currency: "USD",
-    amount: 125000,
-    issuedAt: "2025-10-21",
-    dueAt: "2026-01-15",
-    sold: false,
-  },
-  {
-    id: "INV-24002",
-    seller: "HarborFuel Traders",
-    buyer: "Baltic Carriers",
-    currency: "EUR",
-    amount: 82000,
-    issuedAt: "2025-09-28",
-    dueAt: "2025-12-05",
-    sold: true,
-  },
-  {
-    id: "INV-24003",
-    seller: "BlueWharf Supply",
-    buyer: "Caspian Marine",
-    currency: "USD",
-    amount: 54000,
-    issuedAt: "2025-11-01",
-    dueAt: "2026-02-01",
-    sold: false,
-  },
-  {
-    id: "INV-24004",
-    seller: "StraitFuel DMCC",
-    buyer: "Lighthouse Tankers",
-    currency: "USD",
-    amount: 199500,
-    issuedAt: "2025-10-11",
-    dueAt: "2025-11-25",
-    sold: true,
-  },
-];
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useSearchListings } from "@/lib/api/schemas/listing";
+import { useSearchCompanies } from "@/lib/api/schemas/company";
+import { useMeStore } from "@/lib/persist/auth/meStore";
 
 // ---- Utilities ----
 const fmtMoney = (amt, currency = "USD") =>
@@ -103,9 +69,69 @@ export default function ReceivablesPage() {
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(10);
   const [sort, setSort] = React.useState({ key: "dueAt", dir: "asc" });
+  const [statusFilter, setStatusFilter] = React.useState("OPEN");
+  const [showClosedListings, setShowClosedListings] = React.useState(false);
 
-  // In real app, fetch from API here.
-  const data = DEMO_RECEIVABLES;
+  // Get current user from persistence
+  const { me } = useMeStore();
+  const userCompanyId = me?.companyId;
+
+  // Fetch listings with instruments from the API
+  const { data: listingsData, isLoading: isLoadingListings, error: listingsError } = useSearchListings(
+    {
+      ...(statusFilter !== "ALL" && { status: statusFilter }),
+      limit: 200, // Get all for client-side filtering/sorting
+      offset: 0,
+    },
+    "instrument" // Include the instrument details
+  );
+
+  // Fetch all companies for name resolution
+  const { data: companiesData, isLoading: isLoadingCompanies } = useSearchCompanies({
+    limit: 200,
+  });
+
+  // Create a company lookup map
+  const companyMap = React.useMemo(() => {
+    if (!companiesData) return new Map();
+    return new Map(companiesData.map((company) => [company.id, company]));
+  }, [companiesData]);
+
+  // Extract data, handling the case where instrument might not be populated
+  const data = React.useMemo(() => {
+    if (!listingsData) return [];
+
+    let filteredListings = listingsData.filter((listing) => listing.instrument);
+
+    // Apply closed listing filter
+    if (!showClosedListings) {
+      filteredListings = filteredListings.filter((listing) => listing.status !== "CLOSED");
+    }
+
+    return filteredListings.map((listing) => {
+      const instrument = listing.instrument;
+      const sellerCompany = companyMap.get(listing.sellerCompanyId);
+      const isOwnedByUser = listing.sellerCompanyId === userCompanyId;
+
+      return {
+        id: instrument.id,
+        listingId: listing.id,
+        name: instrument.name,
+        seller: sellerCompany?.legalName || sellerCompany?.tradeName || listing.sellerCompanyId,
+        sellerCompanyId: listing.sellerCompanyId,
+        currency: instrument.currency,
+        amount: instrument.faceValue,
+        issuedAt: instrument.createdAt,
+        dueAt: instrument.maturityDate,
+        maturityPayment: instrument.maturityPayment,
+        instrumentStatus: instrument.instrumentStatus,
+        tradingStatus: instrument.tradingStatus,
+        listingStatus: listing.status,
+        sold: listing.status === "CLOSED",
+        isOwnedByUser,
+      };
+    });
+  }, [listingsData, companyMap, userCompanyId, showClosedListings]);
 
   // Filter (search across a few columns)
   const q = query.trim().toLowerCase();
@@ -113,10 +139,10 @@ export default function ReceivablesPage() {
     if (!q) return true;
     const hay = [
       r.id,
+      r.name,
       r.seller,
-      r.buyer,
       r.currency,
-      r.sold ? "sold" : "available",
+      r.listingStatus,
     ]
       .join(" ")
       .toLowerCase();
@@ -130,6 +156,9 @@ export default function ReceivablesPage() {
       case "amount":
         comparator = compareBy("amount", Number);
         break;
+      case "maturityPayment":
+        comparator = compareBy("maturityPayment", Number);
+        break;
       case "issuedAt":
         comparator = compareBy("issuedAt", (v) => new Date(v).getTime());
         break;
@@ -138,6 +167,12 @@ export default function ReceivablesPage() {
         break;
       case "sold":
         comparator = compareBy("sold", (v) => (v ? 1 : 0));
+        break;
+      case "name":
+        comparator = compareBy("name");
+        break;
+      case "seller":
+        comparator = compareBy("seller");
         break;
       default:
         comparator = compareBy("id");
@@ -176,6 +211,32 @@ export default function ReceivablesPage() {
     </button>
   );
 
+  const isLoading = isLoadingListings || isLoadingCompanies;
+  const error = listingsError;
+
+  // Show loading and error states
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-6xl p-6 space-y-6">
+        <div className="flex items-center justify-center py-10">
+          <p className="text-muted-foreground">Loading receivables...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="mx-auto max-w-6xl p-6 space-y-6">
+        <div className="flex items-center justify-center py-10">
+          <p className="text-red-600">
+            Error loading receivables: {error.message}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-6xl p-6 space-y-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -186,9 +247,38 @@ export default function ReceivablesPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <Select value={statusFilter} onValueChange={(value) => {
+            setStatusFilter(value);
+            setPage(1);
+          }}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Listings</SelectItem>
+              <SelectItem value="OPEN">Open Only</SelectItem>
+              <SelectItem value="CLOSED">Closed Only</SelectItem>
+              <SelectItem value="WITHDRAWN">Withdrawn</SelectItem>
+              <SelectItem value="SUSPENDED">Suspended</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showClosedListings}
+              onChange={(e) => {
+                setShowClosedListings(e.target.checked);
+                setPage(1);
+              }}
+              className="rounded"
+            />
+            Show closed
+          </label>
+
           <Input
-            placeholder="Search by ID, seller, buyer, currency, status…"
+            placeholder="Search by name, seller, currency…"
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
@@ -206,20 +296,20 @@ export default function ReceivablesPage() {
           </TableCaption>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[140px]">
-                <SortLabel columnKey="id">Note ID</SortLabel>
+              <TableHead className="w-[200px]">
+                <SortLabel columnKey="name">Instrument Name</SortLabel>
               </TableHead>
               <TableHead>
                 <SortLabel columnKey="seller">Seller</SortLabel>
               </TableHead>
-              <TableHead>
-                <SortLabel columnKey="buyer">Buyer</SortLabel>
+              <TableHead className="text-right">
+                <SortLabel columnKey="amount">Face Value</SortLabel>
               </TableHead>
               <TableHead className="text-right">
-                <SortLabel columnKey="amount">Amount</SortLabel>
+                <SortLabel columnKey="maturityPayment">Maturity Payment</SortLabel>
               </TableHead>
               <TableHead>
-                <SortLabel columnKey="issuedAt">Issued</SortLabel>
+                <SortLabel columnKey="issuedAt">Created</SortLabel>
               </TableHead>
               <TableHead>
                 <SortLabel columnKey="dueAt">Time Until Payout</SortLabel>
@@ -236,12 +326,30 @@ export default function ReceivablesPage() {
               const daysText = timeUntilPayoutText(r.dueAt);
               const isPastDue = daysUntil(r.dueAt) < 0;
               return (
-                <TableRow key={r.id}>
-                  <TableCell className="font-medium">{r.id}</TableCell>
-                  <TableCell>{r.seller}</TableCell>
-                  <TableCell>{r.buyer}</TableCell>
+                <TableRow key={r.listingId}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate">{r.name}</span>
+                      {r.isOwnedByUser && (
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          Your Company
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    <Link
+                      href={`/companies/${encodeURIComponent(r.sellerCompanyId)}`}
+                      className="text-blue-600 hover:underline"
+                    >
+                      {r.seller}
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-right">
                     {fmtMoney(r.amount, r.currency)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {fmtMoney(r.maturityPayment, r.currency)}
                   </TableCell>
                   <TableCell>{fmtDate(r.issuedAt)}</TableCell>
                   <TableCell>
@@ -250,21 +358,25 @@ export default function ReceivablesPage() {
                     </span>
                   </TableCell>
                   <TableCell>
-                    {r.sold ? (
-                      <Badge variant="secondary">Sold</Badge>
+                    {r.listingStatus === "CLOSED" ? (
+                      <Badge variant="secondary">Closed</Badge>
+                    ) : r.listingStatus === "WITHDRAWN" ? (
+                      <Badge variant="outline">Withdrawn</Badge>
+                    ) : r.listingStatus === "SUSPENDED" ? (
+                      <Badge variant="destructive">Suspended</Badge>
                     ) : (
-                      <Badge variant="default">Available</Badge>
+                      <Badge variant="default">Open</Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    {r.sold ? (
+                    {r.listingStatus !== "OPEN" || r.isOwnedByUser ? (
                       <Button size="sm" variant="outline" disabled>
-                        Purchase
+                        {r.isOwnedByUser ? "Your Listing" : "Purchase"}
                       </Button>
                     ) : (
                       <Button size="sm" asChild>
                         <Link
-                          href={`/receivables/${encodeURIComponent(r.id)}/buy`}
+                          href={`/receivables/${encodeURIComponent(r.listingId)}/buy`}
                         >
                           Purchase
                         </Link>
@@ -281,7 +393,9 @@ export default function ReceivablesPage() {
                   colSpan={8}
                   className="text-center py-10 text-muted-foreground"
                 >
-                  No receivables match your search.
+                  {data.length === 0
+                    ? "No receivables available at the moment."
+                    : "No receivables match your search."}
                 </TableCell>
               </TableRow>
             )}

@@ -8,6 +8,9 @@ const V1_ENTITY_USER = "user";
 const V1_ENTITY_COMPANY = "company";
 const V1_ENTITY_COMPANY_ADDRESS = "company-address";
 const V1_ENTITY_INSTRUMENT = "instrument";
+const V1_ENTITY_LISTING = "listing";
+const V1_ENTITY_BID = "bid";
+const V1_ENTITY_ASK = "ask";
 const V1_ACTION_WORD_SEARCH = "search";
 const V1_ACTION_WORD_DELETE = "delete";
 const V1_ACTION_WORD_TRANSITION = "transition";
@@ -60,6 +63,18 @@ export const EP = {
     instrumentSearch: () => v1Path(V1_ENTITY_INSTRUMENT, V1_ACTION_WORD_SEARCH),
     instrumentTransition: (id: Id) =>
       v1Path(V1_ENTITY_INSTRUMENT, id, V1_ACTION_WORD_TRANSITION),
+
+    // listings
+    listingSearch: () => v1Path(V1_ENTITY_LISTING, V1_ACTION_WORD_SEARCH),
+    listingGetById: (id: Id) => v1Path(V1_ENTITY_LISTING, id),
+
+    // bids
+    bidSearch: () => v1Path(V1_ENTITY_BID, V1_ACTION_WORD_SEARCH),
+    bidGetById: (id: Id) => v1Path(V1_ENTITY_BID, id),
+
+    // asks
+    askSearch: () => v1Path(V1_ENTITY_ASK, V1_ACTION_WORD_SEARCH),
+    askGetById: (id: Id) => v1Path(V1_ENTITY_ASK, id),
   },
 };
 
