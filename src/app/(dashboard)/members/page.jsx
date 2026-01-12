@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -19,6 +19,7 @@ import {
   UserCog,
   Mail,
   Phone,
+  Circle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -51,82 +52,44 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  useDeleteUser,
+  useMe,
+  usePatchUser,
+  useSearchUsers,
+} from "@/lib/api/schemas/user";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { ActivationStatus } from "@/lib/api/schemas/shared/schemas";
 
-// Sample member data
-const sampleMembers = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john.doe@company.com",
-    phone: "+1 (555) 123-4567",
-    role: "Admin",
-    joinDate: "2023-01-15",
-    status: "Active",
-    avatar: "",
-  },
-  {
-    id: "2",
-    name: "Jane Smith",
-    email: "jane.smith@company.com",
-    phone: "+1 (555) 234-5678",
-    role: "Manager",
-    joinDate: "2023-03-20",
-    status: "Active",
-    avatar: "",
-  },
-  {
-    id: "3",
-    name: "Mike Johnson",
-    email: "mike.johnson@company.com",
-    phone: "+1 (555) 345-6789",
-    role: "Editor",
-    joinDate: "2023-06-10",
-    status: "Active",
-    avatar: "",
-  },
-  {
-    id: "4",
-    name: "Sarah Williams",
-    email: "sarah.williams@company.com",
-    phone: "+1 (555) 456-7890",
-    role: "Viewer",
-    joinDate: "2023-08-05",
-    status: "Active",
-    avatar: "",
-  },
-  {
-    id: "5",
-    name: "Emily Brown",
-    email: "emily.brown@company.com",
-    phone: "+1 (555) 567-8901",
-    role: "Editor",
-    joinDate: "2023-09-12",
-    status: "Blocked",
-    avatar: "",
-  },
-  {
-    id: "6",
-    name: "David Lee",
-    email: "david.lee@company.com",
-    phone: "+1 (555) 678-9012",
-    role: "Manager",
-    joinDate: "2023-11-01",
-    status: "Active",
-    avatar: "",
-  },
-];
+const availableRoles = ["ADMIN", "BUYER", "SELLER", "ISSUER"];
 
-const availableRoles = ["Admin", "Manager", "Editor", "Viewer"];
+// Mapping from backend enum values to human-readable labels
+const STATUS_LABELS = {
+  ACTIVE: "Active",
+  INACTIVE: "Inactive",
+  PENDING: "Pending verification",
+  SUSPENDED: "Suspended",
+  DISABLED: "Disabled",
+  DELETED: "Deleted",
+  BANNED: "Banned",
+  LOCKED: "Locked",
+  AWAITING_APPROVAL: "Awaiting approval",
+  REJECTED: "Rejected",
+  ARCHIVED: "Archived",
+  UNVERIFIED: "Unverified",
+};
 
 const getRoleBadgeVariant = (role) => {
   switch (role) {
-    case "Admin":
+    case "ADMIN":
       return "default";
-    case "Manager":
+    case "BUYER":
       return "secondary";
-    case "Editor":
+    case "SELLER":
       return "outline";
-    case "Viewer":
+    case "ISSUER":
       return "outline";
     default:
       return "outline";
@@ -134,48 +97,295 @@ const getRoleBadgeVariant = (role) => {
 };
 
 const getStatusBadgeVariant = (status) => {
-  return status === "Active" ? "default" : "destructive";
+  switch (status) {
+    case "ACTIVE":
+      return "default";
+    case "PENDING":
+    case "AWAITING_APPROVAL":
+    case "UNVERIFIED":
+      return "secondary";
+    case "INACTIVE":
+    case "ARCHIVED":
+      return "outline";
+    case "SUSPENDED":
+    case "DISABLED":
+    case "DELETED":
+    case "BANNED":
+    case "LOCKED":
+    case "REJECTED":
+      return "destructive";
+    default:
+      return "outline";
+  }
 };
 
 const getInitials = (name) => {
   return name
     .split(" ")
+    .filter(Boolean)
     .map((n) => n[0])
     .join("")
     .toUpperCase();
 };
 
+// Skeleton loading component for table rows
+const TableRowSkeleton = () => (
+  <TableRow>
+    <TableCell>
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-10 w-10 rounded-full" />
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-3 w-48" />
+        </div>
+      </div>
+    </TableCell>
+    <TableCell>
+      <Skeleton className="h-4 w-28" />
+    </TableCell>
+    <TableCell>
+      <Skeleton className="h-6 w-16 rounded-full" />
+    </TableCell>
+    <TableCell>
+      <Skeleton className="h-4 w-24" />
+    </TableCell>
+    <TableCell>
+      <Skeleton className="h-6 w-16 rounded-full" />
+    </TableCell>
+    <TableCell>
+      <Skeleton className="h-8 w-8" />
+    </TableCell>
+  </TableRow>
+);
+
 export default function OrganizationMembersPage() {
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
   const [globalFilter, setGlobalFilter] = useState("");
-  const [members, setMembers] = useState(sampleMembers);
+  const [members, setMembers] = useState([]);
+  const router = useRouter();
+
+  const { data: me, isLoading: isMeLoading, isError: isMeError } = useMe();
+  const {
+    mutate: deleteUser,
+    isPending: isUserDeleteLoading,
+    error: userDeleteError,
+  } = useDeleteUser();
+
+  const {
+    mutate: patchUser,
+    isPending: isUserPatchLoading,
+    error: userPatchError,
+  } = usePatchUser();
+
+  const userFilters = useMemo(
+    () => ({
+      companyId: me?.companyId ?? undefined,
+      limit: 200,
+      offset: 0,
+      sort: "-created_at",
+    }),
+    [me?.companyId]
+  );
+
+  const usersEnabled = !!me?.companyId;
+
+  const {
+    data: usersData,
+    isLoading: isUsersLoading,
+    isError: isUsersError,
+  } = useSearchUsers(userFilters, { enabled: usersEnabled });
+
+  useEffect(() => {
+    if (isMeError) {
+      router.push("/"); // Need to re-login
+    }
+    if (isUsersError) {
+      // This should not be happening under normal circumstances
+      // TODO: Let the system admins know
+      toast.error("Failed to load organization members.");
+    }
+  }, [isMeError, isUsersError, router]);
+
+  useEffect(() => {
+    if (!usersData) return;
+
+    setMembers((prev) => {
+      // If we already have members matching the same ids, keep local edits
+      const newIds = new Set(usersData.map((u) => u.id ?? u.email));
+      const prevIds = new Set(prev.map((m) => m.id));
+
+      const sameSet =
+        newIds.size === prevIds.size &&
+        [...newIds].every((id) => prevIds.has(id));
+
+      if (prev.length && sameSet) {
+        return prev;
+      }
+
+      const mapped = usersData.map((user) => {
+        const id = user.id ?? user.email;
+        const name =
+          [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+          user.email;
+        const joinDate = user.createdAt ?? user.created_at ?? null; // handle both camel + snake just in case
+
+        const statusValue =
+          user.accountStatus ??
+          user.account_status ??
+          ActivationStatus?.UNVERIFIED ??
+          "UNVERIFIED";
+
+        return {
+          id,
+          name,
+          email: user.email,
+          phone: user.phone ?? "",
+          role: user.role,
+          joinDate,
+          status: statusValue,
+          avatar: "",
+        };
+      });
+
+      return mapped;
+    });
+  }, [usersData]);
 
   const handleRoleChange = (memberId, newRole) => {
-    setMembers((prev) =>
-      prev.map((member) =>
-        member.id === memberId ? { ...member, role: newRole } : member
-      )
+    patchUser(
+      {
+        userId: memberId,
+        payload: {
+          role: newRole,
+        },
+      },
+      {
+        onSuccess: () => {
+          setMembers((prev) =>
+            prev.map((member) =>
+              member.id === memberId ? { ...member, role: newRole } : member
+            )
+          );
+        },
+
+        onError: (error) => {
+          const errorCode = error.status;
+          switch (errorCode) {
+            case 403:
+              // Forbidden
+              toast.error("You cannot change user roles");
+              break;
+            case 404:
+              // User was not found
+              toast.error("User does not exist");
+              break;
+            case 422:
+              // Formatting error
+              // This should happen since the user does not do anything themselves
+              // TODO: warn sysadmins
+              toast.error("Failed to change the user role");
+              break;
+            case 409:
+              // User with some of these unique constraints exists
+              // In this case - email is taken
+              // This should happen since the user does not do anything themselves
+              // TODO: warn sysadmins
+              toast.error("Failed to change the user role");
+              break;
+            default:
+              // Probably 500
+              // TODO: warn sysadmins
+              toast.error("Failed to change the user role");
+              break;
+          }
+        },
+      }
     );
   };
 
-  const handleBlockUser = (memberId) => {
-    setMembers((prev) =>
-      prev.map((member) =>
-        member.id === memberId
-          ? {
-              ...member,
-              status: member.status === "Active" ? "Blocked" : "Active",
-            }
-          : member
-      )
+  const handleBlockUser = (memberId, isSuspendedOrDisabled) => {
+    patchUser(
+      {
+        userId: memberId,
+        payload: {
+          accountStatus: isSuspendedOrDisabled ? "ACTIVE" : "SUSPENDED",
+        },
+      },
+      {
+        onSuccess: () => {
+          setMembers((prev) =>
+            prev.map((member) =>
+              member.id === memberId
+                ? {
+                    ...member,
+                    status: isSuspendedOrDisabled ? "ACTIVE" : "SUSPENDED",
+                  }
+                : member
+            )
+          );
+        },
+
+        onError: (error) => {
+          const errorCode = error.status;
+          switch (errorCode) {
+            case 403:
+              // Forbidden
+              toast.error("You cannot change account statuses");
+              break;
+            case 404:
+              // User was not found
+              toast.error("User does not exist");
+              break;
+            case 422:
+              // Formatting error
+              // This should happen since the user does not do anything themselves
+              // TODO: warn sysadmins
+              toast.error("Failed to change the account status");
+              break;
+            case 409:
+              // User with some of these unique constraints exists
+              // In this case - email is taken
+              // This should happen since the user does not do anything themselves
+              // TODO: warn sysadmins
+              toast.error("Failed to change the account status");
+              break;
+            default:
+              // Probably 500
+              // TODO: warn sysadmins
+              toast.error("Failed to change the account status");
+              break;
+          }
+        },
+      }
     );
   };
 
   const handleDeleteUser = (memberId) => {
-    if (confirm("Are you sure you want to delete this user?")) {
-      setMembers((prev) => prev.filter((member) => member.id !== memberId));
-    }
+    deleteUser(memberId, {
+      onSuccess: () => {
+        toast.success("User was deleted");
+        setMembers((prev) => prev.filter((member) => member.id !== memberId));
+      },
+      onError: (error) => {
+        const errorCode = error.status;
+        switch (errorCode) {
+          case 403:
+            // Forbidden
+            toast.error("Error deleting the user");
+            break;
+          case 404:
+            // No User
+            toast.error("User does not exist");
+            break;
+          case 500:
+            // Internal server error
+            toast.error("Error deleting the user");
+            break;
+        }
+        console.error("error deleting a user", error);
+      },
+    });
   };
 
   const columns = [
@@ -214,12 +424,22 @@ export default function OrganizationMembersPage() {
     {
       accessorKey: "phone",
       header: "Phone",
-      cell: ({ row }) => (
-        <div className="flex items-center gap-1 text-sm">
-          <Phone className="h-3 w-3 text-muted-foreground" />
-          {row.getValue("phone")}
-        </div>
-      ),
+      cell: ({ row }) => {
+        const value = row.getValue("phone");
+        if (!value) {
+          return (
+            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+              <Phone className="h-3 w-3" />—
+            </div>
+          );
+        }
+        return (
+          <div className="flex items-center gap-1 text-sm">
+            <Phone className="h-3 w-3 text-muted-foreground" />
+            {value}
+          </div>
+        );
+      },
     },
     {
       accessorKey: "role",
@@ -253,7 +473,14 @@ export default function OrganizationMembersPage() {
         );
       },
       cell: ({ row }) => {
-        const date = new Date(row.getValue("joinDate"));
+        const raw = row.getValue("joinDate");
+        if (!raw) {
+          return <div className="text-muted-foreground">—</div>;
+        }
+        const date = new Date(raw);
+        if (Number.isNaN(date.getTime())) {
+          return <div className="text-muted-foreground">—</div>;
+        }
         return <div>{date.toLocaleDateString("en-US")}</div>;
       },
     },
@@ -272,7 +499,12 @@ export default function OrganizationMembersPage() {
       },
       cell: ({ row }) => {
         const status = row.getValue("status");
-        return <Badge variant={getStatusBadgeVariant(status)}>{status}</Badge>;
+        const label = STATUS_LABELS[status] ?? status ?? "Unknown";
+        return (
+          <Badge variant={getStatusBadgeVariant(status)}>
+            {label.toString()}
+          </Badge>
+        );
       },
     },
     {
@@ -280,6 +512,11 @@ export default function OrganizationMembersPage() {
       header: "Actions",
       cell: ({ row }) => {
         const member = row.original;
+
+        const isSuspendedOrDisabled =
+          member.status === "SUSPENDED" ||
+          member.status === "DISABLED" ||
+          member.status === "AWAITING_APPROVAL";
 
         return (
           <DropdownMenu>
@@ -316,9 +553,22 @@ export default function OrganizationMembersPage() {
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
 
-              <DropdownMenuItem onClick={() => handleBlockUser(member.id)}>
-                <Ban className="mr-2 h-4 w-4" />
-                {member.status === "Active" ? "Block User" : "Unblock User"}
+              <DropdownMenuItem
+                onClick={() =>
+                  handleBlockUser(member.id, isSuspendedOrDisabled)
+                }
+              >
+                {isSuspendedOrDisabled ? (
+                  <>
+                    <Circle className="mr-2 h-4 w-4" />
+                    Unblock User
+                  </>
+                ) : (
+                  <>
+                    <Ban className="mr-2 h-4 w-4" />
+                    Block User
+                  </>
+                )}
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
@@ -354,6 +604,9 @@ export default function OrganizationMembersPage() {
     },
   });
 
+  const totalRows = table.getFilteredRowModel().rows.length;
+  const isLoading = isUsersLoading && !members.length;
+
   return (
     <div className="container mx-auto py-10">
       <Card>
@@ -367,7 +620,12 @@ export default function OrganizationMembersPage() {
                 Manage members and their roles in your organization
               </CardDescription>
             </div>
-            <Button>
+            <Button
+              onClick={() => {
+                router.push("/members/create");
+              }}
+              disabled={isLoading}
+            >
               <UserPlus className="mr-2 h-4 w-4" />
               Add Member
             </Button>
@@ -382,6 +640,7 @@ export default function OrganizationMembersPage() {
                 value={globalFilter ?? ""}
                 onChange={(event) => setGlobalFilter(event.target.value)}
                 className="h-9"
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -407,7 +666,24 @@ export default function OrganizationMembersPage() {
                 ))}
               </TableHeader>
               <TableBody>
-                {table.getRowModel().rows?.length ? (
+                {isLoading ? (
+                  <>
+                    <TableRowSkeleton />
+                    <TableRowSkeleton />
+                    <TableRowSkeleton />
+                    <TableRowSkeleton />
+                    <TableRowSkeleton />
+                  </>
+                ) : isUsersError ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center text-destructive"
+                    >
+                      Failed to load data.
+                    </TableCell>
+                  </TableRow>
+                ) : table.getRowModel().rows?.length ? (
                   table.getRowModel().rows.map((row) => (
                     <TableRow
                       key={row.id}
@@ -439,14 +715,18 @@ export default function OrganizationMembersPage() {
 
           <div className="flex items-center justify-between space-x-2 py-4">
             <div className="flex-1 text-sm text-muted-foreground">
-              {table.getFilteredRowModel().rows.length} member(s) total
+              {isLoading ? (
+                <Skeleton className="h-4 w-32" />
+              ) : (
+                `${totalRows} member(s) total`
+              )}
             </div>
             <div className="space-x-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => table.previousPage()}
-                disabled={!table.getCanPreviousPage()}
+                disabled={!table.getCanPreviousPage() || isLoading}
               >
                 Previous
               </Button>
@@ -454,7 +734,7 @@ export default function OrganizationMembersPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => table.nextPage()}
-                disabled={!table.getCanNextPage()}
+                disabled={!table.getCanNextPage() || isLoading}
               >
                 Next
               </Button>

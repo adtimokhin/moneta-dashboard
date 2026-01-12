@@ -8,7 +8,11 @@ const V1_ENTITY_USER = "user";
 const V1_ENTITY_COMPANY = "company";
 const V1_ENTITY_COMPANY_ADDRESS = "company-address";
 const V1_ENTITY_INSTRUMENT = "instrument";
+const V1_ENTITY_LISTING = "listing";
+const V1_ENTITY_BID = "bid";
+const V1_ENTITY_ASK = "ask";
 const V1_ACTION_WORD_SEARCH = "search";
+const V1_ACTION_WORD_DELETE = "delete";
 const V1_ACTION_WORD_TRANSITION = "transition";
 
 /**
@@ -38,6 +42,8 @@ export const EP = {
     userCreate: () => v1Path(V1_ENTITY_USER),
     userGetById: (id: Id) => v1Path(V1_ENTITY_USER, id),
     userSearch: () => v1Path(V1_ENTITY_USER, V1_ACTION_WORD_SEARCH),
+    userDeleteById: (id: Id) => v1Path(V1_ENTITY_USER, id),
+    userPatchById: (id: Id) => v1Path(V1_ENTITY_USER, id),
     me: () => v1Path("me"),
 
     // companies
@@ -57,6 +63,25 @@ export const EP = {
     instrumentSearch: () => v1Path(V1_ENTITY_INSTRUMENT, V1_ACTION_WORD_SEARCH),
     instrumentTransition: (id: Id) =>
       v1Path(V1_ENTITY_INSTRUMENT, id, V1_ACTION_WORD_TRANSITION),
+
+    // listings
+    listingSearch: () => v1Path(V1_ENTITY_LISTING, V1_ACTION_WORD_SEARCH),
+    listingGetById: (id: Id) => v1Path(V1_ENTITY_LISTING, id),
+    listingCreate: () => v1Path(V1_ENTITY_LISTING),
+    listingTransition: (id: Id) =>
+      v1Path(V1_ENTITY_LISTING, id, V1_ACTION_WORD_TRANSITION),
+
+    // bids
+    bidSearch: () => v1Path(V1_ENTITY_BID, V1_ACTION_WORD_SEARCH),
+    bidGetById: (id: Id) => v1Path(V1_ENTITY_BID, id),
+    bidCreate: () => v1Path(V1_ENTITY_BID),
+
+    // asks
+    askSearch: () => v1Path(V1_ENTITY_ASK, V1_ACTION_WORD_SEARCH),
+    askGetById: (id: Id) => v1Path(V1_ENTITY_ASK, id),
+    askCreate: () => v1Path(V1_ENTITY_ASK),
+    askTransition: (id: Id) =>
+      v1Path(V1_ENTITY_ASK, id, V1_ACTION_WORD_TRANSITION),
   },
 };
 

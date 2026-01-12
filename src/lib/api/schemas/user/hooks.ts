@@ -6,30 +6,44 @@ import {
   getMe,
   searchUsers,
   getUserById,
+  patchUser,
+  deleteUser,
 } from "./service";
 import { usersKeys } from "./queries";
-import type { UserCreate, UserFilters } from "./schemas";
+import type { UserCreate, UserFilters, UserPatch } from "./schemas";
 import { useMeStore } from "@/lib/persist/auth/meStore";
 
-export function useUsers() {
+type UseSearchUsersOptions = {
+  enabled?: boolean;
+};
+
+export function useUsers(options?: UseSearchUsersOptions) {
   return useQuery({
     queryKey: usersKeys.list({}),
     queryFn: listUsers,
+    enabled: options?.enabled,
   });
 }
 
-export function useSearchUsers(filters: UserFilters) {
+export function useSearchUsers(
+  filters: UserFilters,
+  options?: UseSearchUsersOptions
+) {
   return useQuery({
     queryKey: usersKeys.list(filters),
     queryFn: () => searchUsers(filters),
+    enabled: options?.enabled,
   });
 }
 
-export function useUser(userId: string | undefined) {
+export function useUser(
+  userId: string | undefined,
+  options?: UseSearchUsersOptions
+) {
   return useQuery({
     queryKey: usersKeys.detail(userId ?? "unknown"),
     queryFn: () => getUserById(userId as string),
-    enabled: !!userId,
+    enabled: options?.enabled && !!userId,
   });
 }
 
@@ -58,4 +72,25 @@ export function useMe() {
   }, [query.data, setMe]);
 
   return query;
+}
+
+export function usePatchUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, payload }: { userId: string; payload: UserPatch }) =>
+      patchUser(userId, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: usersKeys.all });
+    },
+  });
+}
+
+export function useDeleteUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => deleteUser(userId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: usersKeys.all });
+    },
+  });
 }

@@ -34,54 +34,105 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { useCreateUser, useMe } from "@/lib/api/schemas/user";
+import { UserRole } from "@/lib/api/schemas/shared/schemas";
+import { toast } from "sonner";
+import { useEffect } from "react";
 
 const formSchema = z.object({
   email: z
     .string()
     .min(1, "Email is required")
     .email("Please enter a valid email address"),
-  fullName: z
-    .string()
-    .min(1, "Full legal name is required")
-    .min(2, "Name must be at least 2 characters"),
-  address: z.string().min(1, "Address is required"),
-  phoneNumber: z
-    .string()
-    .min(1, "Phone number is required")
-    .regex(
-      /^[\+]?[(]?[0-9]{1,4}[)]?[-\s\.]?[(]?[0-9]{1,4}[)]?[-\s\.]?[0-9]{1,9}$/,
-      "Please enter a valid phone number"
-    ),
-  role: z.string().min(1, "Role is required"),
-  status: z.string().min(1, "Initial status is required"),
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  role: z.enum(["ADMIN", "BUYER", "SELLER", "ISSUER"], {
+    errorMap: () => ({ message: "Role is required" }),
+  }),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 export default function AddUserPage() {
   const router = useRouter();
+  const { data: me, isLoading: isMeLoading, isError: isMeError } = useMe();
+  const {
+    mutate: createUser,
+    isPending: isUserCreateLoading,
+    error: userCreateError,
+  } = useCreateUser();
 
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       email: "",
-      fullName: "",
-      address: "",
-      phoneNumber: "",
+      firstName: "",
+      lastName: "",
+      password: "",
       role: undefined,
-      status: undefined,
     },
   });
 
   const onSubmit = (values) => {
-    console.log("New user data:", values);
-    // Here you would typically:
-    // 1. Send data to your API
-    // 2. Show success notification
-    // 3. Redirect to members page
-    // Example: await fetch('/api/users', { method: 'POST', body: JSON.stringify(values) })
+    createUser(
+      {
+        email: values.email,
+        firstName: values.firstName,
+        lastName: values.lastName,
+        password: values.password,
+        companyId: me.companyId,
+        role: values.role,
+      },
+      {
+        onSuccess: () => {
+          // 2. Show success notification
+          toast.success("User was added");
+          // 3. Redirect to members page on success
+          router.push("/members");
+        },
+        onError: (error) => {
+          const errorCode = error.status;
+          switch (errorCode) {
+            case 401:
+              // 401 - User is not authenticated -> Need to redirect User to login
+              router.push("/login");
+              break;
+            case 403:
+              // 403 - user does not have the premissions -> Toast + redirect to dashboard
+              toast.error("Only admins of the company can add new users");
+              router.push("/"); // dashboard
+              break;
+            case 404:
+              // 404 - company does not exist -> Toast + redirect to dashboard + Need to notify the system - this should not be happening.
+              toast.error("Your company does not exist");
+              router.push("/"); // dashboard
+              break;
+            case 409:
+              // 409 - such user (with such email) already exists
+              toast.error("User this such email already exists");
+              break;
+            case 422:
+              // 422 - the request is formed incorrectly -> a system issue (need to tell the system owners) + toast + redirect to members page
+              toast.error(
+                "The form for adding new users is broke. Please try again later"
+              );
+              router.push("/members"); // members page
+              break;
+            case 500:
+              // 500 - internal server error creating the entity  -> a system issue (need to tell the system owners) + toast + redirect to members page
+              toast.error("There was a server error while adding new user");
+              router.push("/members"); // members page
+              break;
 
-    // For now, just log and redirect
-    alert("User added successfully!");
-    router.push("/members"); // Adjust path as needed
+            default:
+              // Unknown error
+              toast.error("Unknown error occured");
+              console.log("ERROR", error);
+              router.push("/members"); // members page
+              break;
+          }
+        },
+      }
+    );
   };
 
   return (
@@ -134,15 +185,15 @@ export default function AddUserPage() {
                 )}
               />
 
-              {/* Full Legal Name */}
+              {/* First Name */}
               <FormField
                 control={form.control}
-                name="fullName"
+                name="firstName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Legal Name</FormLabel>
+                    <FormLabel>First Name</FormLabel>
                     <FormControl>
-                      <Input placeholder="John Michael Doe" {...field} />
+                      <Input type="text" placeholder="John" {...field} />
                     </FormControl>
                     <FormDescription>
                       Enter the complete legal name as it appears on official
@@ -153,46 +204,37 @@ export default function AddUserPage() {
                 )}
               />
 
-              {/* Address */}
+              {/* Last Name */}
               <FormField
                 control={form.control}
-                name="address"
+                name="lastName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Address</FormLabel>
+                    <FormLabel>Last Name</FormLabel>
                     <FormControl>
-                      <Textarea
-                        placeholder="123 Main Street, Apt 4B, New York, NY 10001"
-                        className="resize-none"
-                        rows={3}
-                        {...field}
-                      />
+                      <Input type="text" placeholder="John" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Full address including street, city, state, and postal
-                      code
+                      Enter the complete legal name as it appears on official
+                      documents
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Phone Number */}
+              {/* Password */}
               <FormField
                 control={form.control}
-                name="phoneNumber"
+                name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
+                    <FormLabel>Password</FormLabel>
                     <FormControl>
-                      <Input
-                        type="tel"
-                        placeholder="+1 (555) 123-4567"
-                        {...field}
-                      />
+                      <Input type="password" placeholder="***" {...field} />
                     </FormControl>
                     <FormDescription>
-                      Include country code if applicable
+                      Enter a password. It must be at least 8 characters long
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -216,44 +258,14 @@ export default function AddUserPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Admin">Admin</SelectItem>
-                        <SelectItem value="Manager">Manager</SelectItem>
-                        <SelectItem value="Editor">Editor</SelectItem>
-                        <SelectItem value="Viewer">Viewer</SelectItem>
+                        <SelectItem value="ADMIN">ADMIN</SelectItem>
+                        <SelectItem value="BUYER">BUYER</SelectItem>
+                        <SelectItem value="SELLER">SELLER</SelectItem>
+                        <SelectItem value="ISSUER">ISSUER</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormDescription>
                       Determines the user's permissions in the system
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Initial Status */}
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Initial Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select initial status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="Active">Active</SelectItem>
-                        <SelectItem value="Pending">Pending</SelectItem>
-                        <SelectItem value="Inactive">Inactive</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Set whether the user can access the system immediately
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

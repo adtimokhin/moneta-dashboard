@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { BaseDTO, MonetaID, UserRole } from "@/lib/api/schemas/shared/schemas";
+import {
+  BaseDTO,
+  MonetaID,
+  UserRole,
+  ActivationStatus,
+} from "@/lib/api/schemas/shared/schemas";
 
 /** User (response model) */
 export const User = BaseDTO.extend({
@@ -8,6 +13,7 @@ export const User = BaseDTO.extend({
   lastName: z.string(),
   companyId: MonetaID,
   role: UserRole,
+  accountStatus: ActivationStatus,
 });
 
 /** UserCreate (request body) */
@@ -18,6 +24,15 @@ export const UserCreate = z.object({
   password: z.string().min(1),
   companyId: MonetaID,
   role: UserRole,
+});
+
+/** UserPatch (request body) */
+export const UserPatch = z.object({
+  email: z.email().optional(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  role: UserRole.optional(),
+  accountStatus: ActivationStatus.optional(),
 });
 
 /** UserFilters (request body for /v1/user/search) */
@@ -37,3 +52,4 @@ export const UserFilters = z.object({
 export type UserCreate = z.infer<typeof UserCreate>;
 export type User = z.infer<typeof User>;
 export type UserFilters = z.infer<typeof UserFilters>;
+export type UserPatch = z.infer<typeof UserPatch>;

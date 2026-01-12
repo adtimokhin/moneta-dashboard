@@ -18,18 +18,18 @@ import type {
  * Search instruments with filters (backed by POST /v1/instrument/search).
  * Pass `{}` to get the default page.
  */
-export function useSearchInstruments(filters: InstrumentFilters) {
+export function useSearchInstruments(filters: InstrumentFilters, include?: string) {
   return useQuery({
-    queryKey: instrumentsKeys.list(filters),
-    queryFn: () => searchInstruments(filters),
+    queryKey: instrumentsKeys.list(filters, include),
+    queryFn: () => searchInstruments(filters, include),
   });
 }
 
 /** Get a single instrument by id */
-export function useInstrument(id: string | undefined) {
+export function useInstrument(id: string | undefined, include?: string) {
   return useQuery({
-    queryKey: instrumentsKeys.detail(id ?? "unknown"),
-    queryFn: () => getInstrument(id as string),
+    queryKey: instrumentsKeys.detail(id ?? "unknown", include),
+    queryFn: () => getInstrument(id as string, include),
     enabled: !!id,
   });
 }

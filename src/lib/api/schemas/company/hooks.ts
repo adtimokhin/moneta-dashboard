@@ -1,31 +1,42 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { listCompanies, createCompany, searchCompanies, getCompanyById } from "./service";
 import { companiesKeys } from "./queries";
-import type { CompanyCreate, CompanyFilters } from "./schemas";
+import type { CompanyCreate, CompanyFilters, IncludeOption } from "./schemas";
 
-export function useCompanies() {
+type UseCompaniesOptions = {
+  enabled?: boolean;
+};
+
+
+export function useCompanies(options?: UseCompaniesOptions) {
   return useQuery({
     queryKey: companiesKeys.list({}),
     queryFn: listCompanies,
-    // optional calming of refetch behavior:
-    // refetchInterval: false,
-    // refetchOnWindowFocus: false,
-    // staleTime: 5 * 60_000,
+    enabled: options?.enabled,
   });
 }
 
-export function useSearchCompanies(filters: CompanyFilters) {
+export function useSearchCompanies(
+  filters: CompanyFilters,
+  include?: IncludeOption[],
+  options?: UseCompaniesOptions
+) {
   return useQuery({
     queryKey: companiesKeys.list(filters),
-    queryFn: () => searchCompanies(filters),
+    queryFn: () => searchCompanies(filters, include),
+    enabled: options?.enabled,
   });
 }
 
-export function useCompany(companyId: string | undefined) {
+export function useCompany(
+  companyId: string | undefined,
+  include?: IncludeOption[],
+  options?: UseCompaniesOptions
+) {
   return useQuery({
-    queryKey: companiesKeys.detail(companyId ?? "unknown"),
-    queryFn: () => getCompanyById(companyId as string),
-    enabled: !!companyId,
+    queryKey: companiesKeys.detail(companyId ?? "unknown", include),
+    queryFn: () => getCompanyById(companyId as string, include),
+    enabled: (options?.enabled ?? true) && !!companyId,
   });
 }
 
