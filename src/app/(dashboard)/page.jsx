@@ -405,7 +405,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent className="grid gap-2">
             <Button variant="outline" className="justify-start" asChild>
-              <Link href="/receivables/create">
+              <Link href="/instruments/create">
                 <FileText className="mr-2 h-4 w-4" />
                 Create New Receivable
               </Link>

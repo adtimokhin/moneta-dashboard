@@ -262,7 +262,7 @@ export default function MyListingsPage() {
           </p>
         </div>
         <Button asChild>
-          <Link href="/receivables/create">
+          <Link href="/instruments/create">
             <Plus className="h-4 w-4 mr-2" />
             Create Instrument
           </Link>
@@ -440,7 +440,7 @@ export default function MyListingsPage() {
                     </Button>
                   ) : (
                     <Button asChild>
-                      <Link href="/receivables/create">
+                      <Link href="/instruments/create">
                         <Plus className="h-4 w-4 mr-2" />
                         Create Your First Instrument
                       </Link>
@@ -573,7 +573,7 @@ export default function MyListingsPage() {
                     No instruments found for your company.
                   </p>
                   <Button asChild>
-                    <Link href="/receivables/create">
+                    <Link href="/instruments/create">
                       <Plus className="h-4 w-4 mr-2" />
                       Create Your First Instrument
                     </Link>
