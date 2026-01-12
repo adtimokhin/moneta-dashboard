@@ -2,20 +2,18 @@
 
 import * as React from "react";
 import {
-  IconCamera,
-  IconChartBar,
+  IconBuilding,
+  IconCash,
+  IconCreditCardPay,
   IconDashboard,
-  IconDatabase,
-  IconFileAi,
   IconFileDescription,
-  IconFileWord,
-  IconFolder,
   IconHelp,
   IconInnerShadowTop,
-  IconListDetails,
-  IconReport,
+  IconReceipt,
   IconSearch,
   IconSettings,
+  IconShoppingCart,
+  IconTags,
   IconUsers,
 } from "@tabler/icons-react";
 
@@ -42,61 +40,13 @@ const data = {
   navMain: [
     {
       title: "Dashboard",
-      url: "#",
+      url: "/",
       icon: IconDashboard,
     },
     {
-      title: "Organization Members",
-      url: "/members",
-      icon: IconUsers,
-    },
-  ],
-  navClouds: [
-    {
-      title: "Capture",
-      icon: IconCamera,
-      isActive: true,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Proposal",
-      icon: IconFileDescription,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Prompts",
-      icon: IconFileAi,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
+      title: "Instruments",
+      url: "/instruments",
+      icon: IconReceipt,
     },
   ],
   navSecondary: [
@@ -116,50 +66,55 @@ const data = {
       icon: IconSearch,
     },
   ],
-  documents: [
+  listings: [
     {
-      name: "Data Library",
-      url: "#",
-      icon: IconDatabase,
+      name: "My Listings",
+      url: "/listings",
+      icon: IconTags,
     },
     {
-      name: "Reports",
-      url: "#",
-      icon: IconReport,
+      name: "Market",
+      url: "/listings/market",
+      icon: IconShoppingCart,
     },
     {
-      name: "Word Assistant",
-      url: "#",
-      icon: IconFileWord,
-    },
-  ],
-  recievables: [
-    {
-      name: "Receivables Lifecycle",
-      url: "#",
-      icon: IconListDetails,
-    },
-    {
-      name: "Receivables Analytics",
-      url: "#",
-      icon: IconChartBar,
+      name: "Track Listings",
+      url: "/listings/track",
+      icon: IconCreditCardPay,
     },
   ],
-  cash_and_settlement: [
+  payments: [
     {
-      name: "Payments & Collections",
-      url: "#",
-      icon: IconListDetails,
+      name: "Overview",
+      url: "/payments",
+      icon: IconCash,
     },
     {
-      name: "Payouts",
-      url: "#",
-      icon: IconChartBar,
+      name: "Paying",
+      url: "/payments/track/paying",
+      icon: IconCreditCardPay,
     },
     {
-      name: "Settlement Calendar",
-      url: "#",
-      icon: IconChartBar,
+      name: "Receiving",
+      url: "/payments/track/receiving",
+      icon: IconReceipt,
+    },
+  ],
+  organization: [
+    {
+      name: "Members",
+      url: "/members",
+      icon: IconUsers,
+    },
+    {
+      name: "Companies",
+      url: "/companies",
+      icon: IconBuilding,
+    },
+    {
+      name: "Documents",
+      url: "/documents",
+      icon: IconFileDescription,
     },
   ],
 };
@@ -184,9 +139,9 @@ export function AppSidebar({ ...props }) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavDocuments title={"Documents"} items={data.documents} />
-        <NavDocuments title={"Receivables"} items={data.recievables} />
-        <NavDocuments title={"Cash & Settlements"} items={data.cash_and_settlement} />
+        <NavDocuments title={"Listings"} items={data.listings} />
+        <NavDocuments title={"Payments"} items={data.payments} />
+        <NavDocuments title={"Organization"} items={data.organization} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
