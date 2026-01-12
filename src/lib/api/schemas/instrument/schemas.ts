@@ -7,6 +7,26 @@ import {
   TradingStatus,
 } from "@/lib/api/schemas/shared/schemas";
 
+/** InstrumentDocument (linked document model) */
+export const InstrumentDocument = z.object({
+  id: MonetaID,
+  createdAt: z.string(),
+  instrumentId: MonetaID,
+  documentId: MonetaID,
+  document: z
+    .object({
+      id: MonetaID,
+      createdAt: z.string(),
+      name: z.string(),
+      mimeType: z.string().optional(),
+      size: z.number().optional(),
+      url: z.string().optional(),
+    })
+    .nullable()
+    .optional(),
+});
+export type InstrumentDocument = z.infer<typeof InstrumentDocument>;
+
 /** Instrument (response model) */
 export const Instrument = BaseDTO.extend({
   name: z.string(),
@@ -19,6 +39,8 @@ export const Instrument = BaseDTO.extend({
   tradingStatus: TradingStatus,
   issuerId: MonetaID,
   createdBy: MonetaID,
+  publicPayload: z.record(z.string(), z.any()).nullable().optional(), // Custom public metadata
+  instrumentDocuments: z.array(InstrumentDocument).nullable().optional(), // Associated documents (when included)
 });
 export type Instrument = z.infer<typeof Instrument>;
 

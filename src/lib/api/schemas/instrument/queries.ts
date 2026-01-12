@@ -1,4 +1,7 @@
-import { buildKeys } from "@/lib/api/utils";
-
-export const instrumentsKeys = buildKeys("instruments");
-// -> instrumentsKeys.all, instrumentsKeys.list({}), instrumentsKeys.detail(id)
+export const instrumentsKeys = {
+  all: ["instruments"] as const,
+  list: (filters: object = {}, include?: string) =>
+    ["instruments", "list", filters, include] as const,
+  detail: (id: string | number, include?: string) =>
+    ["instruments", "detail", String(id), include] as const,
+};

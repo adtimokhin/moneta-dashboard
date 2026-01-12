@@ -21,6 +21,18 @@ export const Listing = BaseDTO.extend({
 });
 export type Listing = z.infer<typeof Listing>;
 
+/** ListingCreate (request body for POST /v1/listing/) */
+export const ListingCreate = z.object({
+  instrumentId: MonetaID,
+});
+export type ListingCreate = z.infer<typeof ListingCreate>;
+
+/** ListingTransition (request body for POST /v1/listing/{id}/transition) */
+export const ListingTransition = z.object({
+  status: ListingStatus,
+});
+export type ListingTransition = z.infer<typeof ListingTransition>;
+
 /** ListingFilters (request body for POST /v1/listing/search) */
 export const ListingFilters = z.object({
   instrumentId: z.array(MonetaID).optional(),

@@ -17,13 +17,30 @@ export const Ask = BaseDTO.extend({
   askerUserId: MonetaID,
   amount: z.number(),
   currency: z.string().min(3).max(3),
-  validUntil: z.string(),
+  validUntil: z.string().nullable().optional(),
   status: AskStatus,
   executionMode: AskExecutionMode,
   binding: z.boolean(),
   listing: z.any().nullable().optional(), // Listing type when included
 });
 export type Ask = z.infer<typeof Ask>;
+
+/** AskCreate (request body for POST /v1/ask/) */
+export const AskCreate = z.object({
+  listingId: MonetaID,
+  amount: z.number().positive("Amount must be greater than 0"),
+  currency: z.string().min(3).max(3),
+  validUntil: z.string().optional(),
+  executionMode: AskExecutionMode.optional(),
+  binding: z.boolean().optional(),
+});
+export type AskCreate = z.infer<typeof AskCreate>;
+
+/** AskTransition (request body for POST /v1/ask/{id}/transition) */
+export const AskTransition = z.object({
+  status: AskStatus,
+});
+export type AskTransition = z.infer<typeof AskTransition>;
 
 /** AskFilters (request body for POST /v1/ask/search) */
 export const AskFilters = z.object({

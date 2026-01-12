@@ -14,17 +14,24 @@ const zInstruments = arrayOf(Instrument);
 
 /** POST /v1/instrument/search → Instrument[] */
 export async function searchInstruments(
-  filters: InstrumentFilters
+  filters: InstrumentFilters,
+  include?: string
 ): Promise<z.infer<typeof zInstruments>> {
+  const params = include ? { include } : {};
   const { data } = await api.post(EP.v1.instrumentSearch(), filters, {
     headers: { "Content-Type": "application/json" },
+    params,
   });
   return zInstruments.parse(data);
 }
 
 /** GET /v1/instrument/{id} → Instrument */
-export async function getInstrument(id: string): Promise<Instrument> {
-  const { data } = await api.get(EP.v1.instrumentGetById(id));
+export async function getInstrument(
+  id: string,
+  include?: string
+): Promise<Instrument> {
+  const params = include ? { include } : {};
+  const { data } = await api.get(EP.v1.instrumentGetById(id), { params });
   return Instrument.parse(data);
 }
 

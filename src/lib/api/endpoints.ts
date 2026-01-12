@@ -67,6 +67,9 @@ export const EP = {
     // listings
     listingSearch: () => v1Path(V1_ENTITY_LISTING, V1_ACTION_WORD_SEARCH),
     listingGetById: (id: Id) => v1Path(V1_ENTITY_LISTING, id),
+    listingCreate: () => v1Path(V1_ENTITY_LISTING),
+    listingTransition: (id: Id) =>
+      v1Path(V1_ENTITY_LISTING, id, V1_ACTION_WORD_TRANSITION),
 
     // bids
     bidSearch: () => v1Path(V1_ENTITY_BID, V1_ACTION_WORD_SEARCH),
@@ -76,6 +79,9 @@ export const EP = {
     // asks
     askSearch: () => v1Path(V1_ENTITY_ASK, V1_ACTION_WORD_SEARCH),
     askGetById: (id: Id) => v1Path(V1_ENTITY_ASK, id),
+    askCreate: () => v1Path(V1_ENTITY_ASK),
+    askTransition: (id: Id) =>
+      v1Path(V1_ENTITY_ASK, id, V1_ACTION_WORD_TRANSITION),
   },
 };
 
