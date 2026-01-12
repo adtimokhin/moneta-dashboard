@@ -12,6 +12,7 @@ import {
 import { usersKeys } from "./queries";
 import type { UserCreate, UserFilters, UserPatch } from "./schemas";
 import { useMeStore } from "@/lib/persist/auth/meStore";
+import { useAuthStore } from "@/lib/persist/auth/store";
 
 type UseSearchUsersOptions = {
   enabled?: boolean;
@@ -59,10 +60,13 @@ export function useCreateUser() {
 
 export function useMe() {
   const { setMe } = useMeStore();
+  const { accessToken, _hasHydrated } = useAuthStore();
 
   const query = useQuery({
     queryKey: usersKeys.me(),
     queryFn: getMe,
+    // Only fetch after auth store has hydrated and we have a token
+    enabled: _hasHydrated && !!accessToken,
   });
 
   React.useEffect(() => {
