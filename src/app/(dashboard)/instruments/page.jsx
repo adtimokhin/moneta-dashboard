@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Eye, Plus } from "lucide-react";
+import { Eye, Plus, Send } from "lucide-react";
 
 import {
   Card,
@@ -29,8 +29,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-import { useSearchInstruments } from "@/lib/api/schemas/instrument";
+import { useSearchInstruments, useTransitionInstrument } from "@/lib/api/schemas/instrument";
 import { useMeStore } from "@/lib/persist/auth/meStore";
+import { toast } from "sonner";
 
 // Utilities
 const fmtMoney = (amt, currency = "USD") =>
@@ -49,8 +50,12 @@ const getInstrumentStatusColor = (status) => {
       return "bg-green-500";
     case "DRAFT":
       return "bg-yellow-500";
+    case "PENDING_APPROVAL":
+      return "bg-orange-500";
     case "SUSPENDED":
       return "bg-red-500";
+    case "REJECTED":
+      return "bg-red-600";
     case "MATURED":
       return "bg-blue-500";
     default:
@@ -87,9 +92,11 @@ const getTradingStatusColor = (status) => {
 export default function InstrumentsPage() {
   const { me } = useMeStore();
   const [statusFilter, setStatusFilter] = React.useState("ALL");
+  const [submittingId, setSubmittingId] = React.useState(null);
 
   // Permission checks
   const canCreateInstrument = me?.role === "ADMIN" || me?.role === "ISSUER";
+  const canSubmitForApproval = me?.role === "ADMIN" || me?.role === "ISSUER";
 
   // Fetch instruments issued by the company
   const {
@@ -102,6 +109,32 @@ export default function InstrumentsPage() {
     limit: 200,
     sort: "-createdAt",
   });
+
+  // Transition mutation
+  const transitionMutation = useTransitionInstrument();
+
+  const handleSubmitForApproval = (instrumentId) => {
+    if (transitionMutation.isPending) return;
+    setSubmittingId(instrumentId);
+
+    transitionMutation.mutate(
+      {
+        id: instrumentId,
+        body: { newStatus: "PENDING_APPROVAL" },
+      },
+      {
+        onSuccess: () => {
+          toast.success("Instrument submitted for approval!");
+          setSubmittingId(null);
+        },
+        onError: (error) => {
+          console.error("Failed to submit for approval:", error);
+          toast.error(error?.message || "Failed to submit for approval");
+          setSubmittingId(null);
+        },
+      }
+    );
+  };
 
   // Statistics
   const stats = React.useMemo(() => {
@@ -223,6 +256,7 @@ export default function InstrumentsPage() {
                 <SelectItem value="ALL">All Statuses</SelectItem>
                 <SelectItem value="ACTIVE">Active</SelectItem>
                 <SelectItem value="DRAFT">Draft</SelectItem>
+                <SelectItem value="PENDING_APPROVAL">Pending Approval</SelectItem>
                 <SelectItem value="SUSPENDED">Suspended</SelectItem>
                 <SelectItem value="MATURED">Matured</SelectItem>
               </SelectContent>
@@ -296,12 +330,24 @@ export default function InstrumentsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link href={`/instruments/${instrument.id}`}>
-                          <Eye className="h-4 w-4 mr-1" />
-                          View
-                        </Link>
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" asChild>
+                          <Link href={`/instruments/${instrument.id}`}>
+                            <Eye className="h-4 w-4 mr-1" />
+                            View
+                          </Link>
+                        </Button>
+                        {instrument.instrumentStatus === "DRAFT" && canSubmitForApproval && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleSubmitForApproval(instrument.id)}
+                            disabled={submittingId === instrument.id}
+                          >
+                            <Send className="h-4 w-4 mr-1" />
+                            {submittingId === instrument.id ? "Submitting..." : "Submit"}
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

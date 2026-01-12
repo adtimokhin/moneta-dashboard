@@ -11,6 +11,7 @@ import {
   DollarSign,
   Info,
   Clock,
+  Send,
 } from "lucide-react";
 
 import {
@@ -31,7 +32,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-import { useInstrument } from "@/lib/api/schemas/instrument";
+import { useInstrument, useTransitionInstrument } from "@/lib/api/schemas/instrument";
+import { useMeStore } from "@/lib/persist/auth/meStore";
+import { toast } from "sonner";
 
 // Utilities
 const fmtMoney = (amt, currency = "USD") =>
@@ -66,8 +69,12 @@ const getInstrumentStatusColor = (status) => {
       return "bg-green-500";
     case "DRAFT":
       return "bg-yellow-500";
+    case "PENDING_APPROVAL":
+      return "bg-orange-500";
     case "SUSPENDED":
       return "bg-red-500";
+    case "REJECTED":
+      return "bg-red-600";
     case "MATURED":
       return "bg-blue-500";
     default:
@@ -104,6 +111,10 @@ const getTradingStatusColor = (status) => {
 export default function InstrumentDetailPage() {
   const params = useParams();
   const instrumentId = params.instrumentId;
+  const { me } = useMeStore();
+
+  // Permission checks
+  const canSubmitForApproval = me?.role === "ADMIN" || me?.role === "ISSUER";
 
   // Fetch the instrument with documents included
   const {
@@ -111,6 +122,29 @@ export default function InstrumentDetailPage() {
     isLoading,
     error,
   } = useInstrument(instrumentId, "instrumentDocuments");
+
+  // Transition mutation
+  const transitionMutation = useTransitionInstrument();
+
+  const handleSubmitForApproval = () => {
+    if (transitionMutation.isPending) return;
+
+    transitionMutation.mutate(
+      {
+        id: instrumentId,
+        body: { newStatus: "PENDING_APPROVAL" },
+      },
+      {
+        onSuccess: () => {
+          toast.success("Instrument submitted for approval!");
+        },
+        onError: (error) => {
+          console.error("Failed to submit for approval:", error);
+          toast.error(error?.message || "Failed to submit for approval");
+        },
+      }
+    );
+  };
 
   if (isLoading) {
     return (
@@ -162,6 +196,15 @@ export default function InstrumentDetailPage() {
             ID: {instrument.id}
           </p>
         </div>
+        {instrument.instrumentStatus === "DRAFT" && canSubmitForApproval && (
+          <Button
+            onClick={handleSubmitForApproval}
+            disabled={transitionMutation.isPending}
+          >
+            <Send className="h-4 w-4 mr-2" />
+            {transitionMutation.isPending ? "Submitting..." : "Submit for Approval"}
+          </Button>
+        )}
       </div>
 
       {/* Status Badges */}
