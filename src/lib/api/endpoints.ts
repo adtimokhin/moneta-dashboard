@@ -71,6 +71,7 @@ export const EP = {
     // bids
     bidSearch: () => v1Path(V1_ENTITY_BID, V1_ACTION_WORD_SEARCH),
     bidGetById: (id: Id) => v1Path(V1_ENTITY_BID, id),
+    bidCreate: () => v1Path(V1_ENTITY_BID),
 
     // asks
     askSearch: () => v1Path(V1_ENTITY_ASK, V1_ACTION_WORD_SEARCH),

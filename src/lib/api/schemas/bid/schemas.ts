@@ -19,11 +19,20 @@ export const Bid = BaseDTO.extend({
   bidderUserId: MonetaID,
   amount: z.number(),
   currency: z.string().min(3).max(3),
-  validUntil: z.string(),
+  validUntil: z.string().nullable().optional(), // Can be null when not specified
   status: BidStatus,
   listing: z.any().nullable().optional(), // Listing type when included
 });
 export type Bid = z.infer<typeof Bid>;
+
+/** BidCreate (request body for POST /v1/bid/) */
+export const BidCreate = z.object({
+  listingId: MonetaID,
+  amount: z.number().positive("Amount must be greater than 0"),
+  currency: z.string().min(3).max(3),
+  validUntil: z.string().optional(),
+});
+export type BidCreate = z.infer<typeof BidCreate>;
 
 /** BidFilters (request body for POST /v1/bid/search) */
 export const BidFilters = z.object({

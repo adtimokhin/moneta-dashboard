@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { api } from "@/lib/api/client";
 import { arrayOf } from "@/lib/api/schemas/shared/schemas";
-import { Bid, BidFilters } from "./schemas";
+import { Bid, BidFilters, BidCreate } from "./schemas";
 import { EP } from "../../endpoints";
 
 const zBids = arrayOf(Bid);
@@ -23,5 +23,13 @@ export async function searchBids(
 export async function getBid(id: string, include?: string): Promise<Bid> {
   const params = include ? { include } : {};
   const { data } = await api.get(EP.v1.bidGetById(id), { params });
+  return Bid.parse(data);
+}
+
+/** POST /v1/bid/ → Bid */
+export async function createBid(bidData: BidCreate): Promise<Bid> {
+  const { data } = await api.post(EP.v1.bidCreate(), bidData, {
+    headers: { "Content-Type": "application/json" },
+  });
   return Bid.parse(data);
 }
