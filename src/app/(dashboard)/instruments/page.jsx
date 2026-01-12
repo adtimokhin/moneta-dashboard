@@ -88,6 +88,9 @@ export default function InstrumentsPage() {
   const { me } = useMeStore();
   const [statusFilter, setStatusFilter] = React.useState("ALL");
 
+  // Permission checks
+  const canCreateInstrument = me?.role === "ADMIN" || me?.role === "ISSUER";
+
   // Fetch instruments issued by the company
   const {
     data: instrumentsData,
@@ -148,12 +151,14 @@ export default function InstrumentsPage() {
             View and manage your company&apos;s instruments
           </p>
         </div>
-        <Button asChild>
-          <Link href="/instruments/create">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Instrument
-          </Link>
-        </Button>
+        {canCreateInstrument && (
+          <Button asChild>
+            <Link href="/instruments/create">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Instrument
+            </Link>
+          </Button>
+        )}
       </div>
 
       {/* Statistics Cards */}
@@ -307,12 +312,14 @@ export default function InstrumentsPage() {
               <p className="text-muted-foreground mb-4">
                 No instruments found for your company.
               </p>
-              <Button asChild>
-                <Link href="/instruments/create">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Your First Instrument
-                </Link>
-              </Button>
+              {canCreateInstrument && (
+                <Button asChild>
+                  <Link href="/instruments/create">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Your First Instrument
+                  </Link>
+                </Button>
+              )}
             </div>
           )}
         </CardContent>

@@ -345,7 +345,7 @@ export default function ListingManagePage() {
             You can only manage listings that belong to your company.
           </p>
           <Button asChild>
-            <Link href="/receivables/market">Back to Market</Link>
+            <Link href="/listings/market">Back to Market</Link>
           </Button>
         </div>
       </div>
@@ -364,7 +364,7 @@ export default function ListingManagePage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/receivables/my-listings">
+            <Link href="/listings">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to My Listings
             </Link>

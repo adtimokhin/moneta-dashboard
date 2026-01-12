@@ -97,6 +97,11 @@ export default function MyListingsPage() {
   const [statusFilter, setStatusFilter] = React.useState("ALL");
   const [activeTab, setActiveTab] = React.useState("listings");
 
+  // Permission checks
+  const canCreateInstrument = me?.role === "ADMIN" || me?.role === "ISSUER";
+  const canCreateListing = me?.role === "ADMIN" || me?.role === "SELLER";
+  const canManageListing = me?.role === "ADMIN" || me?.role === "SELLER";
+
   // Fetch listings for user's company
   const {
     data: listingsData,
@@ -209,7 +214,7 @@ export default function MyListingsPage() {
       {
         onSuccess: (newListing) => {
           toast.success("Listing created successfully!");
-          router.push(`/receivables/${newListing.id}/manage`);
+          router.push(`/listings/${newListing.id}/manage`);
         },
         onError: (error) => {
           console.error("Failed to create listing:", error);
@@ -261,12 +266,14 @@ export default function MyListingsPage() {
             Manage your company&apos;s instrument listings
           </p>
         </div>
-        <Button asChild>
-          <Link href="/instruments/create">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Instrument
-          </Link>
-        </Button>
+        {canCreateInstrument && (
+          <Button asChild>
+            <Link href="/instruments/create">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Instrument
+            </Link>
+          </Button>
+        )}
       </div>
 
       {/* Statistics Cards */}
@@ -370,9 +377,18 @@ export default function MyListingsPage() {
                         <TableRow key={listing.id}>
                           <TableCell>
                             <div>
-                              <p className="font-medium">
-                                {instrument?.name || "Unknown Instrument"}
-                              </p>
+                              {instrument?.id ? (
+                                <Link
+                                  href={`/instruments/${instrument.id}`}
+                                  className="font-medium hover:underline text-primary"
+                                >
+                                  {instrument.name || "Unknown Instrument"}
+                                </Link>
+                              ) : (
+                                <p className="font-medium">
+                                  {instrument?.name || "Unknown Instrument"}
+                                </p>
+                              )}
                               <p className="text-xs text-muted-foreground">
                                 {listing.id.slice(0, 8)}...
                               </p>
@@ -411,10 +427,10 @@ export default function MyListingsPage() {
                                   <Eye className="h-4 w-4" />
                                 </Link>
                               </Button>
-                              {listing.status === "OPEN" && (
+                              {listing.status === "OPEN" && canManageListing && (
                                 <Button variant="outline" size="sm" asChild>
                                   <Link
-                                    href={`/receivables/${listing.id}/manage`}
+                                    href={`/listings/${listing.id}/manage`}
                                   >
                                     <Settings className="h-4 w-4 mr-1" />
                                     Manage
@@ -433,19 +449,19 @@ export default function MyListingsPage() {
                   <p className="text-muted-foreground mb-4">
                     No listings found for your company.
                   </p>
-                  {instrumentsWithoutOpenListing.length > 0 ? (
+                  {instrumentsWithoutOpenListing.length > 0 && canCreateListing ? (
                     <Button onClick={() => setActiveTab("instruments")}>
                       <FileText className="h-4 w-4 mr-2" />
                       View Instruments to List
                     </Button>
-                  ) : (
+                  ) : canCreateInstrument ? (
                     <Button asChild>
                       <Link href="/instruments/create">
                         <Plus className="h-4 w-4 mr-2" />
                         Create Your First Instrument
                       </Link>
                     </Button>
-                  )}
+                  ) : null}
                 </div>
               )}
             </CardContent>
@@ -487,7 +503,7 @@ export default function MyListingsPage() {
                       const existingListing = instrumentToListingMap.get(
                         instrument.id
                       );
-                      const canCreateListing =
+                      const canCreateListingForInstrument =
                         instrument.instrumentStatus === "ACTIVE" &&
                         !hasOpenListing;
 
@@ -495,7 +511,12 @@ export default function MyListingsPage() {
                         <TableRow key={instrument.id}>
                           <TableCell>
                             <div>
-                              <p className="font-medium">{instrument.name}</p>
+                              <Link
+                                href={`/instruments/${instrument.id}`}
+                                className="font-medium hover:underline text-primary"
+                              >
+                                {instrument.name}
+                              </Link>
                               <p className="text-xs text-muted-foreground">
                                 {instrument.id.slice(0, 8)}...
                               </p>
@@ -530,16 +551,21 @@ export default function MyListingsPage() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
-                              {hasOpenListing && existingListing ? (
+                              <Button variant="ghost" size="sm" asChild>
+                                <Link href={`/instruments/${instrument.id}`}>
+                                  <Eye className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                              {hasOpenListing && existingListing && canManageListing ? (
                                 <Button variant="outline" size="sm" asChild>
                                   <Link
-                                    href={`/receivables/${existingListing.id}/manage`}
+                                    href={`/listings/${existingListing.id}/manage`}
                                   >
                                     <Settings className="h-4 w-4 mr-1" />
                                     Manage Listing
                                   </Link>
                                 </Button>
-                              ) : canCreateListing ? (
+                              ) : canCreateListing && canCreateListingForInstrument ? (
                                 <Button
                                   variant="default"
                                   size="sm"
@@ -553,7 +579,7 @@ export default function MyListingsPage() {
                                     ? "Creating..."
                                     : "Create Listing"}
                                 </Button>
-                              ) : (
+                              ) : !canCreateListing ? null : (
                                 <span className="text-xs text-muted-foreground">
                                   {instrument.instrumentStatus !== "ACTIVE"
                                     ? "Not active"
@@ -572,12 +598,14 @@ export default function MyListingsPage() {
                   <p className="text-muted-foreground mb-4">
                     No instruments found for your company.
                   </p>
-                  <Button asChild>
-                    <Link href="/instruments/create">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Your First Instrument
-                    </Link>
-                  </Button>
+                  {canCreateInstrument && (
+                    <Button asChild>
+                      <Link href="/instruments/create">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Create Your First Instrument
+                      </Link>
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>
