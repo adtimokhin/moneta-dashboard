@@ -59,6 +59,7 @@ import {
   usePatchUser,
   useSearchUsers,
 } from "@/lib/api/schemas/user";
+import { useMeStore } from "@/lib/persist/auth/meStore";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ActivationStatus } from "@/lib/api/schemas/shared/schemas";
@@ -165,7 +166,13 @@ export default function OrganizationMembersPage() {
   const [members, setMembers] = useState([]);
   const router = useRouter();
 
-  const { data: me, isLoading: isMeLoading, isError: isMeError } = useMe();
+  // Use persisted store for immediate access to companyId (available from localStorage)
+  const { me: storedMe } = useMeStore();
+  // Also call useMe() to refresh profile data in the background
+  useMe();
+
+  const companyId = storedMe?.companyId;
+
   const {
     mutate: deleteUser,
     isPending: isUserDeleteLoading,
@@ -180,32 +187,26 @@ export default function OrganizationMembersPage() {
 
   const userFilters = useMemo(
     () => ({
-      companyId: me?.companyId ?? undefined,
+      companyId: companyId ?? undefined,
       limit: 200,
       offset: 0,
       sort: "-created_at",
     }),
-    [me?.companyId]
+    [companyId]
   );
-
-  const usersEnabled = !!me?.companyId;
 
   const {
     data: usersData,
     isLoading: isUsersLoading,
+    isPending: isUsersPending,
     isError: isUsersError,
-  } = useSearchUsers(userFilters, { enabled: usersEnabled });
+  } = useSearchUsers(userFilters, { enabled: !!companyId });
 
   useEffect(() => {
-    if (isMeError) {
-      router.push("/"); // Need to re-login
-    }
     if (isUsersError) {
-      // This should not be happening under normal circumstances
-      // TODO: Let the system admins know
       toast.error("Failed to load organization members.");
     }
-  }, [isMeError, isUsersError, router]);
+  }, [isUsersError]);
 
   useEffect(() => {
     if (!usersData) return;
@@ -605,7 +606,7 @@ export default function OrganizationMembersPage() {
   });
 
   const totalRows = table.getFilteredRowModel().rows.length;
-  const isLoading = isUsersLoading && !members.length;
+  const isLoading = (isUsersPending || isUsersLoading) && !members.length;
 
   return (
     <div className="container mx-auto py-10">

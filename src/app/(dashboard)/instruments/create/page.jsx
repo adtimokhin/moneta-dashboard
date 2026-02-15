@@ -102,7 +102,7 @@ export default function CreateReceivablePage() {
       );
 
       // Redirect to track page or show success message
-      router.push("/receivables/track");
+      router.push("/listings");
     } catch (error) {
       toast.error(error.message || "Failed to create instrument");
     } finally {

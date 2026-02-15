@@ -123,53 +123,6 @@ const receivablesDataFallback = [
   },
 ];
 
-// Calculate statistics
-const totalValue = receivablesData.reduce((sum, r) => sum + r.value, 0);
-const purchasedValue = receivablesData
-  .filter((r) => r.type === "purchased")
-  .reduce((sum, r) => sum + r.value, 0);
-const createdValue = receivablesData
-  .filter((r) => r.type === "created")
-  .reduce((sum, r) => sum + r.value, 0);
-
-// Data for pie chart (by type)
-const typeData = [
-  {
-    name: "Purchased",
-    value: purchasedValue,
-    count: receivablesData.filter((r) => r.type === "purchased").length,
-  },
-  {
-    name: "Created",
-    value: createdValue,
-    count: receivablesData.filter((r) => r.type === "created").length,
-  },
-];
-
-// Data for status breakdown
-const statusData = [
-  {
-    name: "Awaiting Payment",
-    value: receivablesData.filter((r) => r.status === "awaiting_payment")
-      .length,
-  },
-  {
-    name: "Has Buyer",
-    value: receivablesData.filter((r) => r.status === "has_buyer").length,
-  },
-  {
-    name: "No Buyer",
-    value: receivablesData.filter((r) => r.status === "no_buyer").length,
-  },
-];
-
-// Data for timeline chart
-const timelineData = receivablesData.map((r) => ({
-  name: r.id,
-  remaining: r.daysRemaining,
-  total: r.totalDays,
-}));
-
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
 
 const getStatusColor = (status) => {
@@ -256,6 +209,49 @@ export default function ReceivablesLifecyclePage() {
       };
     });
   }, [allInstruments]);
+
+  // Calculate statistics from receivablesData
+  const totalValue = receivablesData.reduce((sum, r) => sum + r.value, 0);
+  const purchasedValue = receivablesData
+    .filter((r) => r.type === "purchased")
+    .reduce((sum, r) => sum + r.value, 0);
+  const createdValue = receivablesData
+    .filter((r) => r.type === "created")
+    .reduce((sum, r) => sum + r.value, 0);
+
+  const typeData = [
+    {
+      name: "Purchased",
+      value: purchasedValue,
+      count: receivablesData.filter((r) => r.type === "purchased").length,
+    },
+    {
+      name: "Created",
+      value: createdValue,
+      count: receivablesData.filter((r) => r.type === "created").length,
+    },
+  ];
+
+  const statusData = [
+    {
+      name: "Awaiting Payment",
+      value: receivablesData.filter((r) => r.status === "awaiting_payment").length,
+    },
+    {
+      name: "Has Buyer",
+      value: receivablesData.filter((r) => r.status === "has_buyer").length,
+    },
+    {
+      name: "No Buyer",
+      value: receivablesData.filter((r) => r.status === "no_buyer").length,
+    },
+  ];
+
+  const timelineData = receivablesData.map((r) => ({
+    name: r.id,
+    remaining: r.daysRemaining,
+    total: r.totalDays,
+  }));
 
   const filteredData =
     filterType === "all"
