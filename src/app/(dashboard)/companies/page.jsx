@@ -146,7 +146,15 @@ function useQuery() {
   );
 }
 
-export default function CompaniesPage() {
+export default function CompaniesPageWrapper() {
+  return (
+    <React.Suspense fallback={<div className="container mx-auto py-10 text-center text-muted-foreground">Loading...</div>}>
+      <CompaniesPage />
+    </React.Suspense>
+  );
+}
+
+function CompaniesPage() {
   const router = useRouter();
   const query = useQuery();
   const initialCountry = query.country ? decodeURIComponent(query.country) : "";

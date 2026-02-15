@@ -26,8 +26,9 @@ export default function QueryProvider({
   return (
     <QueryClientProvider client={client}>
       {children}
-      {/* remove in prod if you want */}
-      <ReactQueryDevtools initialIsOpen={false} />
+      {process.env.NODE_ENV !== "production" && (
+        <ReactQueryDevtools initialIsOpen={false} />
+      )}
     </QueryClientProvider>
   );
 }
