@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -43,9 +43,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useSearchInstruments } from "@/lib/api/schemas/instrument";
+import { useSearchListings } from "@/lib/api/schemas/listing";
 
-// Sample receivables data
-const receivablesData = [
+// TODO: This page requires ownership/transaction data which is not available in the current API
+// For now, we'll fetch all instruments created by the user and listings
+// In the future, we need:
+// - GET /v1/ownership/search - to get instruments owned by the user
+// - Transaction history endpoint
+// Sample receivables data (fallback if API not available)
+const receivablesDataFallback = [
   {
     id: "R001",
     name: "Invoice ABC Corp",
@@ -116,53 +123,6 @@ const receivablesData = [
   },
 ];
 
-// Calculate statistics
-const totalValue = receivablesData.reduce((sum, r) => sum + r.value, 0);
-const purchasedValue = receivablesData
-  .filter((r) => r.type === "purchased")
-  .reduce((sum, r) => sum + r.value, 0);
-const createdValue = receivablesData
-  .filter((r) => r.type === "created")
-  .reduce((sum, r) => sum + r.value, 0);
-
-// Data for pie chart (by type)
-const typeData = [
-  {
-    name: "Purchased",
-    value: purchasedValue,
-    count: receivablesData.filter((r) => r.type === "purchased").length,
-  },
-  {
-    name: "Created",
-    value: createdValue,
-    count: receivablesData.filter((r) => r.type === "created").length,
-  },
-];
-
-// Data for status breakdown
-const statusData = [
-  {
-    name: "Awaiting Payment",
-    value: receivablesData.filter((r) => r.status === "awaiting_payment")
-      .length,
-  },
-  {
-    name: "Has Buyer",
-    value: receivablesData.filter((r) => r.status === "has_buyer").length,
-  },
-  {
-    name: "No Buyer",
-    value: receivablesData.filter((r) => r.status === "no_buyer").length,
-  },
-];
-
-// Data for timeline chart
-const timelineData = receivablesData.map((r) => ({
-  name: r.id,
-  remaining: r.daysRemaining,
-  total: r.totalDays,
-}));
-
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
 
 const getStatusColor = (status) => {
@@ -198,13 +158,127 @@ const getUrgencyLevel = (daysRemaining) => {
   return { level: "normal", color: "text-green-500" };
 };
 
+const getInstrumentDisplayStatus = (instrument) => {
+  // Map instrument statuses to display statuses
+  // TODO: This mapping is approximate - need proper ownership/transaction data
+  if (instrument.maturityStatus === "PAID") return "paid";
+  if (instrument.maturityStatus === "DUE") return "awaiting_payment";
+  if (instrument.tradingStatus === "LISTED") return "no_buyer";
+  if (instrument.tradingStatus === "UNDER_OFFER") return "has_buyer";
+  return "awaiting_payment";
+};
+
 export default function ReceivablesLifecyclePage() {
   const [filterType, setFilterType] = useState("all");
+
+  // TODO: Need ownership/transaction endpoints to properly implement this page
+  // For now, we fetch all ACTIVE instruments as a placeholder
+  // Required endpoints:
+  // - GET /v1/ownership/search?ownerId={userId} - get instruments owned by user (purchased)
+  // - GET /v1/instrument/search with createdBy filter - get instruments created by user
+  const { data: allInstruments, isLoading, error } = useSearchInstruments({
+    instrumentStatus: "ACTIVE",
+    limit: 200,
+  });
+
+  // Transform API data to match the expected format
+  const receivablesData = useMemo(() => {
+    if (!allInstruments) return receivablesDataFallback;
+
+    return allInstruments.map((instrument) => {
+      const now = new Date();
+      const maturityDate = new Date(instrument.maturityDate);
+      const createdDate = new Date(instrument.createdAt);
+      const totalDays = Math.ceil(
+        (maturityDate - createdDate) / (1000 * 60 * 60 * 24)
+      );
+      const daysRemaining = Math.ceil(
+        (maturityDate - now) / (1000 * 60 * 60 * 24)
+      );
+
+      return {
+        id: instrument.id,
+        name: instrument.name,
+        type: "created", // TODO: Determine if purchased or created based on ownership data
+        value: instrument.faceValue,
+        status: getInstrumentDisplayStatus(instrument),
+        daysRemaining,
+        totalDays,
+        issuer: instrument.issuerId,
+        createdDate: instrument.createdAt,
+      };
+    });
+  }, [allInstruments]);
+
+  // Calculate statistics from receivablesData
+  const totalValue = receivablesData.reduce((sum, r) => sum + r.value, 0);
+  const purchasedValue = receivablesData
+    .filter((r) => r.type === "purchased")
+    .reduce((sum, r) => sum + r.value, 0);
+  const createdValue = receivablesData
+    .filter((r) => r.type === "created")
+    .reduce((sum, r) => sum + r.value, 0);
+
+  const typeData = [
+    {
+      name: "Purchased",
+      value: purchasedValue,
+      count: receivablesData.filter((r) => r.type === "purchased").length,
+    },
+    {
+      name: "Created",
+      value: createdValue,
+      count: receivablesData.filter((r) => r.type === "created").length,
+    },
+  ];
+
+  const statusData = [
+    {
+      name: "Awaiting Payment",
+      value: receivablesData.filter((r) => r.status === "awaiting_payment").length,
+    },
+    {
+      name: "Has Buyer",
+      value: receivablesData.filter((r) => r.status === "has_buyer").length,
+    },
+    {
+      name: "No Buyer",
+      value: receivablesData.filter((r) => r.status === "no_buyer").length,
+    },
+  ];
+
+  const timelineData = receivablesData.map((r) => ({
+    name: r.id,
+    remaining: r.daysRemaining,
+    total: r.totalDays,
+  }));
 
   const filteredData =
     filterType === "all"
       ? receivablesData
       : receivablesData.filter((r) => r.type === filterType);
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-10 space-y-6">
+        <div className="flex items-center justify-center py-10">
+          <p className="text-muted-foreground">
+            Loading receivables portfolio...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto py-10 space-y-6">
+        <div className="flex items-center justify-center py-10">
+          <p className="text-red-600">Error loading data: {error.message}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-10 space-y-6">
