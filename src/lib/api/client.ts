@@ -15,7 +15,7 @@ function resolveBaseURL(): string {
     (typeof globalThis !== "undefined" &&
       (globalThis as any).__API_BASE_URL__) ||
     "";
-  return (fromProcess || fromGlobal || "/api") as string;
+  return (fromProcess || fromGlobal || "https://moneta-app-production.up.railway.app") as string;
 }
 
 export const api = axios.create({
