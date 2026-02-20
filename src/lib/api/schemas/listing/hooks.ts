@@ -8,14 +8,19 @@ import {
 import { listingsKeys } from "./queries";
 import type { ListingFilters, ListingCreate, ListingTransition } from "./schemas";
 
+type UseSearchListingsOptions = {
+  enabled?: boolean;
+};
+
 /**
  * Search listings with filters (backed by POST /v1/listing/search).
  * Pass `{}` to get the default page.
  */
-export function useSearchListings(filters: ListingFilters, include?: string) {
+export function useSearchListings(filters: ListingFilters, include?: string, options?: UseSearchListingsOptions) {
   return useQuery({
     queryKey: listingsKeys.list(filters, include),
     queryFn: () => searchListings(filters, include),
+    enabled: options?.enabled,
   });
 }
 

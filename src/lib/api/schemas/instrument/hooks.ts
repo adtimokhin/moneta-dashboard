@@ -14,14 +14,19 @@ import type {
   InstrumentTransitionRequest,
 } from "./schemas";
 
+type UseSearchInstrumentsOptions = {
+  enabled?: boolean;
+};
+
 /**
  * Search instruments with filters (backed by POST /v1/instrument/search).
  * Pass `{}` to get the default page.
  */
-export function useSearchInstruments(filters: InstrumentFilters, include?: string) {
+export function useSearchInstruments(filters: InstrumentFilters, include?: string, options?: UseSearchInstrumentsOptions) {
   return useQuery({
     queryKey: instrumentsKeys.list(filters, include),
     queryFn: () => searchInstruments(filters, include),
+    enabled: options?.enabled,
   });
 }
 

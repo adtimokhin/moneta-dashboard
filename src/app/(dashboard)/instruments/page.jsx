@@ -91,10 +91,12 @@ const getTradingStatusColor = (status) => {
 };
 
 export default function InstrumentsPage() {
-  const { me: storedMe } = useMeStore();
-  const { data: fetchedMe, isPending: isMePending } = useMe();
-  // Use fetched data immediately (no useEffect delay); fall back to persisted store
-  const me = fetchedMe ?? storedMe;
+  // Use persisted store for immediate access to companyId (available from localStorage)
+  const { me } = useMeStore();
+  // Also call useMe() to refresh profile data in the background
+  useMe();
+
+  const companyId = me?.companyId;
 
   const [statusFilter, setStatusFilter] = React.useState("ALL");
   const [submittingId, setSubmittingId] = React.useState(null);
@@ -103,17 +105,22 @@ export default function InstrumentsPage() {
   const canCreateInstrument = me?.role === "ADMIN" || me?.role === "ISSUER";
   const canSubmitForApproval = me?.role === "ADMIN" || me?.role === "ISSUER";
 
-  // Fetch instruments issued by the company
+  // Fetch instruments issued by the company — only once companyId is known
   const {
     data: instrumentsData,
+    isPending: isInstrumentsPending,
     isLoading,
     error,
-  } = useSearchInstruments({
-    issuerId: me?.companyId ? [me.companyId] : undefined,
-    ...(statusFilter !== "ALL" && { instrumentStatus: statusFilter }),
-    limit: 200,
-    sort: "-createdAt",
-  });
+  } = useSearchInstruments(
+    {
+      issuerId: companyId ? [companyId] : undefined,
+      ...(statusFilter !== "ALL" && { instrumentStatus: statusFilter }),
+      limit: 200,
+      sort: "-createdAt",
+    },
+    undefined,
+    { enabled: !!companyId }
+  );
 
   // Transition mutation
   const transitionMutation = useTransitionInstrument();
@@ -158,16 +165,6 @@ export default function InstrumentsPage() {
         .length,
     };
   }, [instrumentsData]);
-
-  if (!me?.companyId) {
-    return (
-      <div className="container mx-auto py-10">
-        <p className="text-center text-muted-foreground">
-          {isMePending ? "Loading..." : "Please log in to view your instruments."}
-        </p>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -269,7 +266,7 @@ export default function InstrumentsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
+          {(isLoading || isInstrumentsPending) && !instrumentsData ? (
             <p className="text-center py-8 text-muted-foreground">
               Loading instruments...
             </p>

@@ -93,9 +93,12 @@ const getTradingStatusColor = (status) => {
 };
 
 export default function MyListingsPage() {
-  const { me: storedMe } = useMeStore();
-  const { data: fetchedMe, isPending: isMePending } = useMe();
-  const me = fetchedMe ?? storedMe;
+  // Use persisted store for immediate access to companyId (available from localStorage)
+  const { me } = useMeStore();
+  // Also call useMe() to refresh profile data in the background
+  useMe();
+
+  const companyId = me?.companyId;
   const router = useRouter();
   const [statusFilter, setStatusFilter] = React.useState("ALL");
   const [activeTab, setActiveTab] = React.useState("listings");
@@ -105,27 +108,33 @@ export default function MyListingsPage() {
   const canCreateListing = me?.role === "ADMIN" || me?.role === "SELLER";
   const canManageListing = me?.role === "ADMIN" || me?.role === "SELLER";
 
-  // Fetch listings for user's company
+  // Fetch listings for user's company — only once companyId is known
   const {
     data: listingsData,
+    isPending: isListingsPending,
     isLoading: isLoadingListings,
     error: listingsError,
   } = useSearchListings(
     {
-      sellerCompanyId: me?.companyId ? [me.companyId] : undefined,
+      sellerCompanyId: companyId ? [companyId] : undefined,
       ...(statusFilter !== "ALL" && { status: statusFilter }),
       limit: 200,
       sort: "-createdAt",
     },
-    "instrument"
+    "instrument",
+    { enabled: !!companyId }
   );
 
-  // Fetch instruments issued by the company
-  const { data: instrumentsData, isLoading: isLoadingInstruments } =
-    useSearchInstruments({
-      issuerId: me?.companyId ? [me.companyId] : undefined,
-      limit: 200,
-    });
+  // Fetch instruments issued by the company — only once companyId is known
+  const { data: instrumentsData, isPending: isInstrumentsPending, isLoading: isLoadingInstruments } =
+    useSearchInstruments(
+      {
+        issuerId: companyId ? [companyId] : undefined,
+        limit: 200,
+      },
+      undefined,
+      { enabled: !!companyId }
+    );
 
   // Debug logging
   React.useEffect(() => {
@@ -239,16 +248,6 @@ export default function MyListingsPage() {
     };
   }, [listingsData]);
 
-  if (!me?.companyId) {
-    return (
-      <div className="container mx-auto py-10">
-        <p className="text-center text-muted-foreground">
-          {isMePending ? "Loading..." : "Please log in to view your listings."}
-        </p>
-      </div>
-    );
-  }
-
   if (listingsError) {
     return (
       <div className="container mx-auto py-10">
@@ -354,7 +353,7 @@ export default function MyListingsPage() {
               </div>
             </CardHeader>
             <CardContent>
-              {isLoadingListings ? (
+              {(isLoadingListings || isListingsPending) && !listingsData ? (
                 <p className="text-center py-8 text-muted-foreground">
                   Loading listings...
                 </p>
@@ -482,7 +481,7 @@ export default function MyListingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoadingInstruments ? (
+              {(isLoadingInstruments || isInstrumentsPending) && !instrumentsData ? (
                 <p className="text-center py-8 text-muted-foreground">
                   Loading instruments...
                 </p>
