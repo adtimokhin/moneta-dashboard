@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 
 import { useSearchInstruments, useTransitionInstrument } from "@/lib/api/schemas/instrument";
 import { useMeStore } from "@/lib/persist/auth/meStore";
+import { useMe } from "@/lib/api/schemas/user/hooks";
 import { toast } from "sonner";
 
 // Utilities
@@ -91,6 +92,7 @@ const getTradingStatusColor = (status) => {
 
 export default function InstrumentsPage() {
   const { me } = useMeStore();
+  const { isPending: isMePending } = useMe(); // triggers background fetch + populates store
   const [statusFilter, setStatusFilter] = React.useState("ALL");
   const [submittingId, setSubmittingId] = React.useState(null);
 
@@ -158,7 +160,7 @@ export default function InstrumentsPage() {
     return (
       <div className="container mx-auto py-10">
         <p className="text-center text-muted-foreground">
-          Please log in to view your instruments.
+          {isMePending ? "Loading..." : "Please log in to view your instruments."}
         </p>
       </div>
     );

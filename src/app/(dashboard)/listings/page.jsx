@@ -423,7 +423,7 @@ export default function MyListingsPage() {
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
                               <Button variant="ghost" size="sm" asChild>
-                                <Link href={`/receivables/${listing.id}/bid`}>
+                                <Link href={`/listings/${listing.id}/bid`}>
                                   <Eye className="h-4 w-4" />
                                 </Link>
                               </Button>

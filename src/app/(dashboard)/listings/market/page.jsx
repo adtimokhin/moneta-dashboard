@@ -376,7 +376,7 @@ export default function ReceivablesPage() {
                     ) : (
                       <Button size="sm" asChild>
                         <Link
-                          href={`/receivables/${encodeURIComponent(r.listingId)}/bid`}
+                          href={`/listings/${encodeURIComponent(r.listingId)}/bid`}
                         >
                           Purchase
                         </Link>
