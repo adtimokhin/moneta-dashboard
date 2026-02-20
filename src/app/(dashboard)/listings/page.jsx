@@ -35,6 +35,7 @@ import { useSearchListings, useCreateListing } from "@/lib/api/schemas/listing";
 import { useSearchAsks } from "@/lib/api/schemas/ask";
 import { useSearchInstruments } from "@/lib/api/schemas/instrument";
 import { useMeStore } from "@/lib/persist/auth/meStore";
+import { useMe } from "@/lib/api/schemas/user/hooks";
 import { toast } from "sonner";
 
 // Utilities
@@ -92,7 +93,9 @@ const getTradingStatusColor = (status) => {
 };
 
 export default function MyListingsPage() {
-  const { me } = useMeStore();
+  const { me: storedMe } = useMeStore();
+  const { data: fetchedMe, isPending: isMePending } = useMe();
+  const me = fetchedMe ?? storedMe;
   const router = useRouter();
   const [statusFilter, setStatusFilter] = React.useState("ALL");
   const [activeTab, setActiveTab] = React.useState("listings");
@@ -240,7 +243,7 @@ export default function MyListingsPage() {
     return (
       <div className="container mx-auto py-10">
         <p className="text-center text-muted-foreground">
-          Please log in to view your listings.
+          {isMePending ? "Loading..." : "Please log in to view your listings."}
         </p>
       </div>
     );

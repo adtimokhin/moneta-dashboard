@@ -91,8 +91,11 @@ const getTradingStatusColor = (status) => {
 };
 
 export default function InstrumentsPage() {
-  const { me } = useMeStore();
-  const { isPending: isMePending } = useMe(); // triggers background fetch + populates store
+  const { me: storedMe } = useMeStore();
+  const { data: fetchedMe, isPending: isMePending } = useMe();
+  // Use fetched data immediately (no useEffect delay); fall back to persisted store
+  const me = fetchedMe ?? storedMe;
+
   const [statusFilter, setStatusFilter] = React.useState("ALL");
   const [submittingId, setSubmittingId] = React.useState(null);
 
